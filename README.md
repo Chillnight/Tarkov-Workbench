@@ -24,7 +24,7 @@ The desktop app opens in its own window; it does not need a browser, an account 
 - **Practical choices:** ordinary, low-profile scope mounts are preferred when they stay close to the best achievable stats. Underbarrel launchers are off by default. Equivalent alternatives are offered only when the complete build remains compatible; equal-performing choices favor lower weight before price.
 - **Readable result:** see ergonomics, recoil, weight, estimated attachment cost and a pictured parts list with short and full names, assembly paths and compatibility details.
 
-![Calculated M4A1 build and statistics](docs/screenshots/workbench-build.png)
+![Calculated weapon build and statistics](docs/screenshots/workbench-build.png)
 
 ## How to use
 
