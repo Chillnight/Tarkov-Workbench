@@ -6,10 +6,13 @@ Author: CA
 
 Select **Update database** below the retrieval timestamp, then **Download update**. The app first shows the source hosts and asks for permission for this download. **Stay offline** closes the prompt without starting a network request. There are no startup checks, scheduled checks or automatic background downloads.
 
+The online-setup portable edition has no bundled game data or item images. On its first launch, the same dialog opens automatically and offers **Download data** or **Stay offline**. Only the button starts a network request. If setup is deferred or fails, the app remains empty and **Update database** reopens the prompt. A successful setup saves all required images and the catalog together; later launches work offline.
+
 The public community sources are:
 
 - https://json.tarkov.dev/regular/items: item stats and attachment compatibility.
 - https://json.tarkov.dev/regular/items_en: English names and labels.
+- https://json.tarkov.dev/regular/barters: trader barter offers.
 - https://assets.tarkov.dev: necessary additional item images.
 
 The data comes from [tarkov.dev / The Hideout](https://tarkov.dev/api/), not an official Battlestate update feed. No API key or user account is needed. The exports total roughly 20 MB before compression, plus new images. Already bundled or locally cached images with the same source URL are reused. Updates use HTTPS, omit credentials and reject redirects and unexpected download hosts.
@@ -22,7 +25,7 @@ An EFT patch does not immediately update the community export. The displayed ret
 
 The app stages the candidate in memory, checks required stats, item counts, missing attachment references, cyclic mounting chains, supported source format and image sources, and downloads required additional images. Downloads have time and size limits. A large unexplained decrease in item count is rejected. Validation does not replace in-game verification of the community data.
 
-The complete catalog and its additional images are committed in a single IndexedDB transaction. Failed downloads, cancellation, invalid data or insufficient local storage leave the previous active database intact. One previous snapshot is retained for recovery. At startup the app validates saved snapshots and can fall back to the previous or bundled data. An app release with a newer bundled source can supersede an older downloaded snapshot.
+The complete catalog and its additional images are committed in a single IndexedDB transaction. Failed downloads, cancellation, invalid data or insufficient local storage leave the previous active database intact; on first setup, the app remains empty. One previous snapshot is retained for recovery. At startup the app validates saved snapshots and can fall back to the previous or bundled data when available. An app release with a newer bundled source can supersede an older downloaded snapshot.
 
 Downloaded data is stored in the Windows user profile under AppData/Roaming/Tarkov Workbench. Browser use stores it for that browser/site. It remains available offline after restarting. Application files are not rewritten; copying the complete portable folder to another PC does not transfer this local profile. Version 1.5 uses the same profile as earlier versions. The portable ZIP needs no installer.
 

@@ -1,13 +1,17 @@
 # Author: CA
+param([switch] $Online)
 $ErrorActionPreference = 'Stop'
 Import-Module (Join-Path $PSHOME 'Modules\Microsoft.PowerShell.Utility\Microsoft.PowerShell.Utility.psd1')
 Import-Module (Join-Path $PSHOME 'Modules\Microsoft.PowerShell.Archive\Microsoft.PowerShell.Archive.psd1')
 $projectRoot = [IO.Path]::GetFullPath((Split-Path -Parent $PSScriptRoot))
 $releasePath = Join-Path $projectRoot 'release'
-$portablePath = Join-Path $projectRoot 'Portable'
-$runtimePath = Join-Path $releasePath 'win-unpacked'
-$stagePath = Join-Path $releasePath 'portable-stage'
-$backupPath = Join-Path $releasePath 'portable-previous'
+$folderName = if ($Online) { 'Online-Portable' } else { 'Portable' }
+$archiveName = if ($Online) { 'Tarkov-Workbench-Online-Portable.zip' } else { 'Tarkov-Workbench-Portable.zip' }
+$readmeName = if ($Online) { 'ONLINE-PORTABLE-README.txt' } else { 'PORTABLE-README.txt' }
+$portablePath = Join-Path $projectRoot $folderName
+$runtimePath = if ($Online) { Join-Path $releasePath 'online\win-unpacked' } else { Join-Path $releasePath 'win-unpacked' }
+$stagePath = Join-Path $releasePath ($folderName + '-stage')
+$backupPath = Join-Path $releasePath ($folderName + '-previous')
 
 function Assert-ProjectPath([string] $path) {
     $resolved = [IO.Path]::GetFullPath($path)
@@ -35,7 +39,7 @@ Copy-Item -LiteralPath $runtimePath -Destination $stagePath -Recurse
 $docsPath = Join-Path $stagePath 'docs'
 New-Item -ItemType Directory -Path $docsPath -Force | Out-Null
 
-Copy-Item -LiteralPath (Join-Path $projectRoot 'docs\PORTABLE-README.txt') -Destination (Join-Path $docsPath 'README.txt')
+Copy-Item -LiteralPath (Join-Path $projectRoot ('docs\' + $readmeName)) -Destination (Join-Path $docsPath 'README.txt')
 Copy-Item -LiteralPath (Join-Path $projectRoot 'docs\UPDATES.md') -Destination $docsPath
 Copy-Item -LiteralPath (Join-Path $projectRoot 'docs\AVAILABILITY.md') -Destination $docsPath
 Copy-Item -LiteralPath (Join-Path $projectRoot 'docs\PRACTICAL-MOUNTS.md') -Destination $docsPath
@@ -46,7 +50,7 @@ $manifest = Get-ChildItem -LiteralPath $stagePath -File -Recurse | Sort-Object F
     '{0}  {1}' -f (Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256).Hash,$relativeName
 }
 Set-Content -LiteralPath (Join-Path $docsPath 'SHA256SUMS.txt') -Value $manifest -Encoding ascii
-$stagedArchive = Join-Path $releasePath 'Tarkov-Workbench-Portable.zip'
+$stagedArchive = Join-Path $releasePath $archiveName
 $archiveEntries = Get-ChildItem -LiteralPath $stagePath -Force | Select-Object -ExpandProperty FullName
 Compress-Archive -LiteralPath $archiveEntries -DestinationPath $stagedArchive -CompressionLevel Optimal -Force
 
@@ -58,11 +62,13 @@ if (Test-Path -LiteralPath $portablePath) {
     Move-Item -LiteralPath $portablePath -Destination $backupPath
 }
 Move-Item -LiteralPath $stagePath -Destination $portablePath
-$archivePath = Join-Path $projectRoot 'Tarkov-Workbench-Portable.zip'
+$archivePath = Join-Path $projectRoot $archiveName
 Copy-Item -LiteralPath $stagedArchive -Destination $archivePath -Force
 $zipHash = (Get-FileHash -LiteralPath $archivePath -Algorithm SHA256).Hash
-Set-Content -LiteralPath (Join-Path $projectRoot 'Tarkov-Workbench-Portable.sha256') -Value "$zipHash  Tarkov-Workbench-Portable.zip" -Encoding ascii
-Copy-Item -LiteralPath (Join-Path $portablePath 'docs\SHA256SUMS.txt') -Destination (Join-Path $releasePath 'SHA256SUMS.txt') -Force
-Copy-Item -LiteralPath (Join-Path $projectRoot 'docs\PORTABLE-README.txt') -Destination (Join-Path $releasePath 'README.txt') -Force
+Set-Content -LiteralPath (Join-Path $projectRoot ($archiveName -replace '\.zip$','.sha256')) -Value "$zipHash  $archiveName" -Encoding ascii
+if (-not $Online) {
+    Copy-Item -LiteralPath (Join-Path $portablePath 'docs\SHA256SUMS.txt') -Destination (Join-Path $releasePath 'SHA256SUMS.txt') -Force
+    Copy-Item -LiteralPath (Join-Path $projectRoot ('docs\' + $readmeName)) -Destination (Join-Path $releasePath 'README.txt') -Force
+}
 Write-Output "Portable folder: $portablePath"
 Write-Output "Distribution ZIP: $archivePath"

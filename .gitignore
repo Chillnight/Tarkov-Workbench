@@ -6,6 +6,7 @@ research/
 test-results/
 release/
 Portable/
+Online-Portable/
 Portable-SelfSigned/
 .signing/
 .env
@@ -22,3 +23,4 @@ dist/data/precomputed.json
 dist/images/
 Tarkov-Workbench-SelfSigned.sha256
 Tarkov-Workbench-Portable.sha256
+Tarkov-Workbench-Online-Portable.sha256

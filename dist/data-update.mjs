@@ -42,8 +42,8 @@ export async function prepareUpdate({current,bundled,storedImages=[],overrides,s
   const fetchedAt=new Date().toISOString(),decode=bytes=>new TextDecoder('utf-8',{fatal:true}).decode(bytes);
   const catalog=await normalizeExport({text:decode(raw.bytes),modified:raw.modified,fetchedAt},{text:decode(names.bytes)},overrides,{text:decode(barters.bytes),fetchedAt});
   validateCatalog(catalog,current);signal?.throwIfAborted();
-  if(catalog.meta.version===current.meta.version)return {unchanged:true,checkedAt:fetchedAt};
-  const bundledSources=new Map(imageJobs(bundled).map(job=>[job.path,job.source]));
+  if(current&&catalog.meta.version===current.meta.version)return {unchanged:true,checkedAt:fetchedAt};
+  const bundledSources=new Map((bundled?imageJobs(bundled):[]).map(job=>[job.path,job.source]));
   const saved=new Map(storedImages.map(item=>[item.path,item]));
   const images=[],jobs=[];
   for(const job of imageJobs(catalog)){
@@ -64,5 +64,5 @@ export async function prepareUpdate({current,bundled,storedImages=[],overrides,s
   }
   await Promise.all(Array.from({length:Math.min(4,jobs.length)},worker));
   signal?.throwIfAborted();onProgress('All data checked. Saving the new local database …');
-  return {catalog,images,schemaVersion:1,checkedAt:fetchedAt,bundledVersion:bundled.meta.version};
+  return {catalog,images,schemaVersion:1,checkedAt:fetchedAt,bundledVersion:bundled?.meta.version??null};
 }

@@ -6,7 +6,7 @@ import {BARTERS_URL} from '../dist/barters.mjs';
 import {normalizeExport,DATA_URL,NAMES_URL} from '../dist/catalog-import.mjs';
 import {validateCatalog,validateImageSource} from '../dist/data-validation.mjs';
 import {download,prepareUpdate} from '../dist/data-update.mjs';
-import {validateSnapshot} from '../dist/database-ui.mjs';
+import {validateSnapshot,loadDatabase} from '../dist/database-ui.mjs';
 import {imageResponse} from '../desktop/image-download.mjs';
 
 const read=path=>readFile(new URL(path,import.meta.url),'utf8');
@@ -55,6 +55,12 @@ test('saved snapshots must include every new image before they can activate',()=
   assert.throws(()=>validateSnapshot(snapshot,catalog),/missing images/);
   snapshot.images=[{path:item.icon,source:item.iconSource,blob:new Blob(['fixture'],{type:'image/webp'})}];
   assert.equal(validateSnapshot(snapshot,catalog),snapshot);
+  assert.throws(()=>validateSnapshot({catalog:structuredClone(catalog),images:[],schemaVersion:1},null),/missing images/);
+});
+
+test('an asset-free build starts without data and waits for explicit setup',async()=>{
+  const loaded=await loadDatabase(null);
+  assert.equal(loaded.snapshot,null);
 });
 
 test('Legacy snapshots and malformed trader offers cannot silently bypass availability',()=>{
@@ -95,4 +101,19 @@ test('missing image download rejects the candidate and preserves old data',{skip
     return new Response('Image missing',{status:404});
   }}),/HTTP 404/);
   assert.equal(JSON.stringify(catalog),before);
+});
+
+test('first-run setup downloads every required image and validates its saved snapshot',{skip:!rawFixture||!bartersFixture},async()=>{
+  const webp=new TextEncoder().encode('RIFF0000WEBP');
+  let imageDownloads=0;
+  const prepared=await prepareUpdate({current:null,bundled:null,overrides,fetcher:async url=>{
+    if(url===DATA_URL)return new Response(rawFixture);
+    if(url===NAMES_URL)return new Response(namesFixture);
+    if(url===BARTERS_URL)return new Response(bartersFixture);
+    imageDownloads++;
+    return new Response(webp,{headers:{'content-type':'image/webp'}});
+  }});
+  assert.equal(prepared.images.length,imageDownloads);
+  assert.ok(imageDownloads>2000);
+  assert.equal(validateSnapshot(prepared,null),prepared);
 });

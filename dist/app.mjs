@@ -260,8 +260,9 @@ async function activateDatabase(snapshot){
 }
 async function init(){
   try{
-    const response=await fetch('./data/catalog.json');if(!response.ok)throw new Error('Bundled weapon data is missing');
-    state.bundled=await response.json();
+    const response=await fetch('./data/catalog.json');
+    if(response.ok)state.bundled=await response.json();
+    else if(response.status!==404)throw new Error('Could not check bundled weapon data');
     $('magazine').value=normalizeMagazineMinimum(await storage.get('settings:magazineMinimum'));renderBalance();
     const mountingPreference=await storage.get('settings:preferPracticalMounts');
     if(typeof mountingPreference==='boolean')$('practical-mounts').checked=mountingPreference;
@@ -269,15 +270,19 @@ async function init(){
     if(typeof preference==='boolean')$('exclude-arena').checked=preference;
     state.traderSettings=normalizeTraderSettings(await storage.get('settings:traders'));traderSummary();
     const launchers=await storage.get('settings:allowGrenadeLaunchers');if(typeof launchers==='boolean')$('allow-launchers').checked=launchers;
-    const loaded=await loadDatabase(state.bundled);await activateDatabase(loaded.snapshot);
+    const loaded=await loadDatabase(state.bundled);
+    if(loaded.snapshot)await activateDatabase(loaded.snapshot);
+    else{$('data-status').textContent='No local database yet · setup required';notice('Download game data to start using the workbench. Nothing is downloaded without your approval.');}
     if(loaded.warning)$('update-status').textContent=loaded.warning;
-    setupDatabaseUpdates({getSnapshot:()=>state.snapshot,getBundled:()=>state.bundled,activate:activateDatabase,setBusy:value=>{
+    let ready=false;
+    async function readyOnce(){if(ready)return;ready=true;webMCP();setupSettings({settings:state.traderSettings,firstRun:!(await storage.get('settings:setupComplete')),onSave:next=>{state.traderSettings=next;traderSummary();refreshAvailability();}});}
+    const updates=setupDatabaseUpdates({getSnapshot:()=>state.snapshot,getBundled:()=>state.bundled,activate:activateDatabase,onReady:readyOnce,setBusy:value=>{
       if(value&&state.running)cancel();state.updating=value;
       document.querySelector('.controls').inert=value;
-      $('calculate').disabled=value||state.running||!$('weapon').value;$('scope-change').disabled=value||!$('weapon').value;$('magazine-change').disabled=value||!$('weapon').value;$('settings-open').disabled=value;
+      $('calculate').disabled=value||state.running||!$('weapon').value;$('scope-change').disabled=value||!$('weapon').value;$('magazine-change').disabled=value||!$('weapon').value;$('settings-open').disabled=value||!state.catalog;
     }});
-    $('update-data').disabled=false;webMCP();
-    setupSettings({settings:state.traderSettings,firstRun:!(await storage.get('settings:setupComplete')),onSave:next=>{state.traderSettings=next;traderSummary();refreshAvailability();}});
+    $('update-data').disabled=false;
+    if(loaded.snapshot)await readyOnce();else updates.showInitialSetup();
   }catch(error){notice(`Could not start: ${error.message}`,true);$('data-status').textContent='Could not load game data';}
 }
 init();
