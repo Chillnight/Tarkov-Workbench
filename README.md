@@ -2,8 +2,6 @@
 
 An open-source Escape from Tarkov weapon builder for Windows. Choose how you want a weapon to perform, and Tarkov Workbench assembles a compatible build from locally saved community data.
 
-![Tarkov Workbench welcome screen](docs/screenshots/workbench-welcome.png)
-
 ## Download
 
 **[Download the Windows portable ZIP](https://github.com/Chillnight/Tarkov-Workbench/releases/latest/download/Tarkov-Workbench-Online-Portable.zip)** · [Release notes and checksum](https://github.com/Chillnight/Tarkov-Workbench/releases/latest)
@@ -13,6 +11,10 @@ An open-source Escape from Tarkov weapon builder for Windows. Choose how you wan
 3. On first launch, choose **Download data** if you want the app to retrieve the weapon database and item images. The app names the sources before making a request. Once setup finishes, your data is available offline.
 
 The desktop app opens in its own window; it does not need a browser, an account or a separate Node.js installation. Use the Release ZIP above rather than GitHub's **Code → Download ZIP**, which contains source code. The Windows build is unsigned, so Smart App Control may block it on some PCs.
+
+## Preview
+
+![Tarkov Workbench welcome screen](docs/screenshots/workbench-welcome.png)
 
 ## What it does
 
