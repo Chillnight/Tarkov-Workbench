@@ -28,4 +28,4 @@ To package an edition without downloaded game data or images, run `npm ci` and `
 
 The source repository and a portable release have different contents. The offline ZIP and installer embed a snapshot; the online-setup ZIP omits it. Do not upload binary releases, signing keys/certificates or local portable folders as source files; attach reviewed ZIPs to a GitHub Release instead. If bundled-asset releases are published later, review their included third-party data and images separately. See [distribution](DISTRIBUTION.md).
 
-The application source has no public reuse license yet. Add a license for the code only after deciding its terms and confirming which files can be covered. Third-party notices must remain intact; a code license does not grant rights to Escape from Tarkov artwork or game data.
+Our application source is licensed under the [MIT License](../LICENSE). Third-party notices remain intact; this code license does not grant rights to Escape from Tarkov artwork or game data.

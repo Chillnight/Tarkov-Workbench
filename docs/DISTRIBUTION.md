@@ -2,7 +2,7 @@
 
 Author: CA
 
-The GitHub repository is the source project. End users should use a GitHub Release asset instead of the green Code / Download ZIP button, which downloads source files and is not an installable application. A release can offer `Tarkov-Workbench-Setup.exe` as the main Windows download and `Tarkov-Workbench-Portable.zip` as an alternative. Both contain a database snapshot and item images, so neither asks users to run developer commands.
+The GitHub repository is the source project. End users should use the `Tarkov-Workbench-Online-Portable.zip` GitHub Release asset instead of the green Code / Download ZIP button, which downloads source files and is not an installable application. Extract the complete portable ZIP and run the EXE in its root. An installer may be offered in a later release. The older offline portable build and the current local installer build contain a database snapshot and item images; neither is part of the public release.
 
 For a release without a redistributed game-data snapshot or item images, run `npm run portable:online` and offer `Tarkov-Workbench-Online-Portable.zip`. Its root EXE opens an initial setup dialog naming the data and image hosts. The user chooses whether to download; the app validates the full data set and all required images before saving them for offline use. No download begins on startup without that choice. This edition needs an internet connection once and does not include the bundled images or catalog.
 

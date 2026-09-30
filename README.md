@@ -97,7 +97,7 @@ npm run portable:package
 npm run installer:build
 ```
 
-`npm run sync` is an explicit download from `json.tarkov.dev` and `assets.tarkov.dev`; it is needed once after cloning this source repository. It creates the local catalog and images that are excluded from Git. The released portable ZIP already contains its own snapshot and does not run this source-setup step on startup. See [source setup](docs/SOURCE-SETUP.md) for the complete workflow and redistribution notes.
+`npm run sync` is an explicit download from `json.tarkov.dev` and `assets.tarkov.dev`; it is needed for the offline developer build after cloning. It creates the local catalog and images that are excluded from Git. To build the online portable edition, run `npm ci` and `npm run portable:online` without syncing data. The released online portable ZIP asks the user before its first data download. See [source setup](docs/SOURCE-SETUP.md) for the complete workflow and redistribution notes.
 
 If installation scripts are disabled by your npm policy, run `node node_modules/electron/install.js` before starting/building the desktop app. `desktop:build` creates the unpacked runtime in `release/win-unpacked/`. Packaging includes that complete runtime and creates `Portable/`, `Tarkov-Workbench-Portable.zip` and a ZIP checksum in the project root. A file checksum manifest is in `docs/SHA256SUMS.txt`. The previous prepared folder is retained in `release/portable-previous/`. Distribute the complete ZIP, not a standalone EXE or the source folder. The EXE has a stable filename without a version suffix. Downloaded snapshots, images and calculation caches live in AppData/Roaming/Tarkov Workbench on each PC; they do not travel with the ZIP.
 
