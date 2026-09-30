@@ -2,7 +2,7 @@
 
 Author: CA
 
-Generated using the built-in image generation tool. Project asset: `dist/assets/workbench-banner.png`. The title and supporting text are rendered in HTML above the image. The illustration is original app artwork, not an official game screenshot.
+Generated using an image generation tool. Project asset: `dist/assets/workbench-banner.png`. The title and supporting text are rendered in HTML above the image. The illustration is original app artwork, not an official game screenshot.
 
 Prompt:
 
