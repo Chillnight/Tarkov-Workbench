@@ -1,0 +1,46 @@
+{
+  "name": "tarkov-workbench",
+  "version": "1.8.4",
+  "private": true,
+  "description": "Offline Escape from Tarkov weapon optimizer",
+  "author": "CA",
+  "type": "module",
+  "main": "desktop/main.cjs",
+  "scripts": {
+    "start": "node scripts/serve.mjs",
+    "sync": "node scripts/sync.mjs",
+    "test": "node --test tests/*.test.mjs",
+    "prepare:vendor": "node scripts/vendor.mjs",
+    "desktop": "electron .",
+    "desktop:build": "electron-builder --win --x64 --dir",
+    "portable:package": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/package-portable.ps1",
+    "portable:self-sign": "powershell -NoProfile -File scripts/package-self-signed.ps1"
+  },
+  "devDependencies": {
+    "highs": "1.15.3",
+    "electron": "44.4.5",
+    "electron-builder": "26.15.3"
+  },
+  "build": {
+    "appId": "ca.tarkov.workbench",
+    "productName": "Tarkov Workbench",
+    "copyright": "Author: CA",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "dist/**/*",
+      "desktop/**/*",
+      "package.json"
+    ],
+    "asar": true,
+    "npmRebuild": false,
+    "electronDist": "node_modules/electron/dist",
+    "win": {
+      "target": "dir",
+      "executableName": "Tarkov-Workbench",
+      "icon": "desktop/icon.ico",
+      "signExecutable": false
+    }
+  }
+}

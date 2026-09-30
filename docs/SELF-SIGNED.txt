@@ -1,0 +1,36 @@
+TARKOV WORKBENCH - SELF-SIGNED TEST PACKAGE
+Author: CA
+
+Extract the entire ZIP to a fresh folder. Close an older running instance,
+then open Tarkov-Workbench.exe in the root. Keep all files together.
+
+This is an experiment with a self-signed code-signing certificate. It does
+not provide a Microsoft-verified publisher or guarantee that Smart App
+Control permits execution. A blocked launch is a possible, expected result.
+No certificate installation or security-setting change is performed.
+
+Windows Properties > Digital Signatures on the EXE shows signer CA.
+An untrusted root/certificate-chain warning is expected on an unmanaged PC.
+SIGNATURES.json records Windows verification results at packaging time.
+CERTIFICATE.txt contains the public fingerprint and expiration date.
+CA-self-signed.cer contains only the public certificate for inspection.
+The private key is not included. Do not distribute private keys/PFX files.
+
+The certificate was created in the developer's CurrentUser\My store with
+a non-exportable RSA 3072-bit private key and code-signing usage. Existing
+trusted third-party signatures are preserved. Previously unsigned EXE/DLL
+files in this package are signed with CA using SHA-256. No timestamp service
+is used, so this test signature does not remain valid beyond expiry.
+
+If Windows blocks the app, record the message and stop this experiment.
+Self-signing is not a promise of Smart App Control compatibility.
+
+DEVELOPER REBUILD
+Run npm run desktop:build, npm run portable:package, then
+npm run portable:self-sign. Move the previous Portable-SelfSigned folder
+aside first. The script reuses the certificate thumbprint saved locally
+in .signing/self-signed-thumbprint.txt. The same Windows account and private
+key are required for reuse. The .signing folder is not distributed.
+
+See UPDATES.md for database updates. The app opens without a calculated
+build; choose a weapon and press Calculate build. Normal use is offline.

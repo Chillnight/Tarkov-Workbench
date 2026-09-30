@@ -1,0 +1,16 @@
+{
+  "author": "CA",
+  "verifiedAt": "2026-09-27",
+  "items": {
+    "674d6121c09f69dfb201a888": {
+      "suppressor": true,
+      "reason": "Fixed integrally suppressed barrel assembly; no removable muzzle or barrel slot.",
+      "source": "https://escapefromtarkov.fandom.com/wiki/Aklys_Defense_Velociraptor_.300_Blackout_assault_rifle"
+    },
+    "5888945a2459774bf43ba385": {
+      "suppressor": true,
+      "reason": "Integral suppressor in DVL-10 500mm barrel; categorized as barrel in the source export.",
+      "source": "https://escapefromtarkov.fandom.com/wiki/DVL-10_7.62x51_500mm_suppressed_barrel"
+    }
+  }
+}
