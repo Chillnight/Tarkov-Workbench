@@ -45,6 +45,7 @@ Copy-Item -LiteralPath (Join-Path $projectRoot 'docs\AVAILABILITY.md') -Destinat
 Copy-Item -LiteralPath (Join-Path $projectRoot 'docs\PRACTICAL-MOUNTS.md') -Destination $docsPath
 Copy-Item -LiteralPath (Join-Path $projectRoot 'docs\TRADERS-AND-LOADOUT.md') -Destination $docsPath
 Copy-Item -LiteralPath (Join-Path $projectRoot 'dist\vendor\HIGHS-LICENSE.txt') -Destination $docsPath
+Copy-Item -LiteralPath (Join-Path $projectRoot 'LICENSE') -Destination (Join-Path $stagePath 'LICENSE.txt')
 $manifest = Get-ChildItem -LiteralPath $stagePath -File -Recurse | Sort-Object FullName | ForEach-Object {
     $relativeName = $_.FullName.Substring($stagePath.Length + 1).Replace('\','/')
     '{0}  {1}' -f (Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256).Hash,$relativeName

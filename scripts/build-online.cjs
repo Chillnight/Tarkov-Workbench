@@ -1,11 +1,15 @@
 // Author: CA
 const path = require('node:path');
+const { mkdir, copyFile } = require('node:fs/promises');
 const { build, Platform, Arch } = require('electron-builder');
 const { listPackage } = require('@electron/asar');
 const pkg = require('../package.json');
 const root = path.resolve(__dirname, '..');
 
 async function main() {
+  const dataDirectory = path.join(root, 'dist', 'data');
+  await mkdir(dataDirectory, { recursive: true });
+  await copyFile(path.join(root, 'scripts', 'overrides.json'), path.join(dataDirectory, 'overrides.json'));
   const config = {
     ...pkg.build,
     directories: { ...pkg.build.directories, output: path.join('release', 'online') },
