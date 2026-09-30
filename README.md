@@ -6,11 +6,13 @@ An English-language Escape from Tarkov weapon builder for Windows and the web. T
 
 ## Windows desktop app
 
+For a simple end-user download, attach the built `Tarkov-Workbench-Setup.exe` to a GitHub Release. Users download that installer; they do not clone the source repository, install Node.js or run `npm run sync`. The installer contains the local data snapshot and item images, installs the app with Start Menu and desktop shortcuts, and offers an uninstall entry. A portable ZIP can remain a second download for users who prefer no installation. The installer is currently a local build artifact, not a published release. Review rights to the bundled game images/data before distributing either complete package. The public installer build is unsigned; Windows Smart App Control can still block a new, unknown app.
+
 Version 1.8.4 starts the bundled runtime directly, without extracting it to a temporary folder. Weapon search shows complete standard-preset reference images. Startup still shows the workbench banner with no selected weapon or calculated build. Close an older running instance before opening the new EXE. The GUI header displays **v1.8.4**. The Arena filter now also excludes reviewed Season 3 weapon rewards, including every Ravage stock variant.
 
 Extract the entire `Tarkov-Workbench-Portable.zip` to a new folder, then double-click `Tarkov-Workbench.exe`. The prepared folder is `Portable/`. The application, database and images are in `resources/`, translations in `locales/`, and instructions/checksums in `docs/`. Electron's runtime DLLs and data files must stay beside the EXE. Keep all extracted files together. The raw developer runtime remains in `release/win-unpacked/`.
 
-The portable Windows 10/11 x64 app opens in its own window. No browser, separate Node.js/.NET installation, account or internet connection is needed. The root EXE is the Electron application itself; there is no additional launcher. Copy the entire extracted folder when moving it to another PC. No application extraction, compilation or download happens at startup. Windows security scanning and disk speed can still affect launch time. Manually downloaded updates are stored separately in the same local Windows profile as earlier versions. Close the window to quit. The standard Portable ZIP is unsigned; the separate SelfSigned ZIP carries a CA test signature.
+The portable Windows 10/11 x64 app opens in its own window. No browser, separate Node.js/.NET installation, account or internet connection is needed. The root EXE is the Electron application itself; there is no additional launcher. Copy the entire extracted folder when moving it to another PC. No application extraction, compilation or download happens at startup. Windows security scanning and disk speed can still affect launch time. Manually downloaded updates are stored separately in the same local Windows profile as earlier versions. Close the window to quit. The portable ZIP is unsigned.
 
 1. Open **Select weapon**, type into the search field inside the dropdown, then click a result or use the arrow keys and Enter. `Mod`, `Mod4` and `VAL MOD.4` find the AS VAL MOD.4. Escape dismisses the dropdown. Searching alone does not change the current selection. Weapons without a mountable attachment are hidden (nine entries in this snapshot, leaving 163 moddable weapons before the Arena filter).
 2. Optionally click **Choose scope** and select a pictured sight. Filter by 1x, 1-4x, 1-6x, 1-8x, other magnification or thermal/night vision. With no scope selected, **Iron sights** is the default.
@@ -24,10 +26,6 @@ The portable Windows 10/11 x64 app opens in its own window. No browser, separate
 ## Trader settings and accessories
 
 The first launch opens **Settings**, also reachable beside **Update database**. Set each trader to 0–4; cash and barter offers are filtered to those levels. Quest-unlocked offers are **included by default**, with an opt-out toggle. Both pictured accessory pickers verify complete assemblies with the current settings. Underbarrel launchers are excluded unless **Allow underbarrel launchers** is enabled. Vendor, required level and purchase price are displayed beside each part. Barters are included by default with exchange recipes and estimated ingredient values; disable them in Settings if desired. Flea purchases, live stock and parts obtained from weapon bundles are not included. See [trader and loadout rules](docs/TRADERS-AND-LOADOUT.md).
-
-## Self-signed experiment
-
-`npm run portable:self-sign` creates a separate `Portable-SelfSigned/` folder and `Tarkov-Workbench-SelfSigned.zip` from the prepared `Portable/` folder. It creates or reuses a CA test code-signing certificate in the current Windows user's Personal certificate store, with a non-exportable private key. Only the public certificate is included in the ZIP. Existing trusted signatures are preserved; unsigned EXE/DLL files receive SHA-256 test signatures. Move the previous test output folder aside before rerunning. This does not install a trusted root/publisher or alter Smart App Control. Self-signing does not establish a publicly trusted publisher or guarantee that Windows permits execution. See [self-signed test instructions](docs/SELF-SIGNED.txt).
 
 ## Browser version
 
@@ -92,6 +90,7 @@ node scripts/verify-catalog.mjs
 npm run desktop
 npm run desktop:build
 npm run portable:package
+npm run installer:build
 ```
 
 `npm run sync` is an explicit download from `json.tarkov.dev` and `assets.tarkov.dev`; it is needed once after cloning this source repository. It creates the local catalog and images that are excluded from Git. The released portable ZIP already contains its own snapshot and does not run this source-setup step on startup. See [source setup](docs/SOURCE-SETUP.md) for the complete workflow and redistribution notes.
@@ -101,6 +100,8 @@ If installation scripts are disabled by your npm policy, run `node node_modules/
 Optimizer tests compare results with exhaustive enumeration and cover adapter chains, repeated parts, asymmetric conflicts, blocked slots, categories, magazines, required parts, ergonomics caps and malformed graphs. `node scripts/verify-catalog.mjs` validates all weapon graphs and images, checks six variants for seven representative weapons plus six explicit-scope scenarios, and writes `dist/data/precomputed.json` plus `test-results/catalog-report.json`.
 
 `npm run prepare:vendor` refreshes bundled HiGHS browser files and its license after an intentional dependency update. `dist/` can be hosted on a static web server that serves `.mjs` and `.wasm` with the correct MIME types. No backend is required. Opening `index.html` through `file://` is unsupported because workers and WebAssembly require a suitable origin.
+
+`npm run installer:build` creates an unsigned `release/Tarkov-Workbench-Setup.exe` and its SHA-256 checksum. It does not install the app or upload a GitHub Release. For the source/release split and publication checks, see [distribution](docs/DISTRIBUTION.md).
 
 The desktop wrapper uses Electron with renderer sandboxing, context isolation and no renderer Node.js access. It serves bundled files over a private application protocol and does not start an HTTP server. Its restricted image-download endpoint permits only known tarkov.dev item-image URLs. The local web launcher provides the same endpoint because the image host does not allow direct browser fetches. A separately hosted web version needs this endpoint for updates containing additional images; static hosting alone supports the bundled offline snapshot.
 

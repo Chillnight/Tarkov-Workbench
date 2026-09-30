@@ -14,7 +14,7 @@
     "desktop": "electron .",
     "desktop:build": "electron-builder --win --x64 --dir",
     "portable:package": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/package-portable.ps1",
-    "portable:self-sign": "powershell -NoProfile -File scripts/package-self-signed.ps1"
+    "installer:build": "node scripts/package-installer.cjs"
   },
   "devDependencies": {
     "highs": "1.15.3",

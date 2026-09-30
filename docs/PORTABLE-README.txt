@@ -41,8 +41,8 @@ Downloaded data, additional images and calculation caches are stored in the
 Windows user profile (AppData/Roaming/Tarkov Workbench), not beside the EXE.
 Portable means no installer; local profile data does not travel with the ZIP.
 Optional wiki/source links open the browser only when clicked.
-The standard Portable ZIP is unsigned. The separate SelfSigned ZIP uses
-a CA test signature. Instructions are in docs/;
+The Portable ZIP is unsigned. An installer may also be offered as a
+separate GitHub Release download.
 Electron and Chromium licenses are in the root. Copy the entire folder to move
 the app to another PC. An app release replaces the complete package.
 

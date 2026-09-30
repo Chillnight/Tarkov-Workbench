@@ -21,8 +21,9 @@ To prepare a portable Windows build after the data sync and verification:
 ```text
 npm run desktop:build
 npm run portable:package
+npm run installer:build
 ```
 
-The source repository and a portable release have different contents. A release ZIP embeds the snapshot used for offline operation. Do not upload release ZIPs, signing keys/certificates or the local `Portable/` folder as source files. If releases are published later, review their included third-party data and images separately.
+The source repository and a portable release have different contents. A release ZIP or installer embeds the snapshot used for offline operation. Do not upload binary releases, signing keys/certificates or the local `Portable/` folder as source files; attach reviewed binaries to a GitHub Release instead. If releases are published later, review their included third-party data and images separately. See [distribution](DISTRIBUTION.md).
 
 The application source has no public reuse license yet. Add a license for the code only after deciding its terms and confirming which files can be covered. Third-party notices must remain intact; a code license does not grant rights to Escape from Tarkov artwork or game data.
