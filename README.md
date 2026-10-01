@@ -1,3 +1,5 @@
+<p><img src="desktop/icon.png" alt="Tarkov Workbench icon" width="80" height="80"></p>
+
 # Tarkov Workbench
 
 An open-source Escape from Tarkov weapon builder for Windows. Choose how you want a weapon to perform, and Tarkov Workbench assembles a compatible build from locally saved community data.
