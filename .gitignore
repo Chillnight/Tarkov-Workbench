@@ -4,6 +4,7 @@ research/
 .sites-runtime/
 .openai/
 test-results/
+reports/
 release/
 Portable/
 Online-Portable/

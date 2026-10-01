@@ -1,9 +1,16 @@
 // Author: CA
 import {TRADERS,normalizeTraderSettings} from './traders.mjs';
 import * as storage from './storage.mjs';
-export function setupSettings({settings,onSave,firstRun}){
+import {applyTheme,normalizeTheme} from './themes.mjs';
+export function setupSettings({settings,theme='original',onSave,firstRun}){
   const $=id=>document.getElementById(id),dialog=$('settings-dialog');
   const grid=$('trader-levels');
+  let previewTheme=normalizeTheme(theme);
+  function selectTheme(value){
+    previewTheme=applyTheme(value);
+    for(const button of $('theme-options').querySelectorAll('button'))button.setAttribute('aria-pressed',String(button.dataset.themeChoice===previewTheme));
+  }
+  for(const button of $('theme-options').querySelectorAll('button'))button.addEventListener('click',()=>selectTheme(button.dataset.themeChoice));
   function setLevel(traderId,level){
     const group=$(`trader-${traderId}`);group.value=String(level);
     for(const button of group.querySelectorAll('button'))button.setAttribute('aria-pressed',String(Number(button.dataset.level)===level));
@@ -19,6 +26,7 @@ export function setupSettings({settings,onSave,firstRun}){
     field.append(legend,group);grid.append(field);
   }
   function open(){
+    selectTheme(theme);
     $('restrict-traders').checked=settings.restrictTraders;
     $('include-quest-offers').checked=settings.includeQuestOffers;
     $('include-barters').checked=settings.includeBarters;
@@ -27,14 +35,16 @@ export function setupSettings({settings,onSave,firstRun}){
   }
   $('settings-open').addEventListener('click',open);
   $('settings-cancel').addEventListener('click',()=>dialog.close());
+  dialog.addEventListener('close',()=>selectTheme(theme));
   $('settings-save').addEventListener('click',async()=>{
     const next=normalizeTraderSettings({restrictTraders:$('restrict-traders').checked,includeQuestOffers:$('include-quest-offers').checked,includeBarters:$('include-barters').checked,
       traderLevels:Object.fromEntries(TRADERS.map(t=>[t.id,Number($(`trader-${t.id}`).value)]))});
     $('settings-save').disabled=true;
     try{
       if(!await storage.put('settings:traders',next))throw new Error('Settings storage unavailable');
+      if(!await storage.put('settings:theme',previewTheme))throw new Error('Settings storage unavailable');
       if(!await storage.put('settings:setupComplete',true))throw new Error('Settings storage unavailable');
-      settings=next;onSave(next);dialog.close();
+      settings=next;theme=previewTheme;onSave(next);dialog.close();
     }catch{$('settings-error').textContent='Could not save settings. Please try again.';}
     finally{$('settings-save').disabled=false;}
   });

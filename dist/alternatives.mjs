@@ -17,7 +17,7 @@ export function alternativeWeightLabel(original,candidate){
 }
 export function replaceAttachment(catalog,options,rows,rowIndex,itemId){
   const row=rows[rowIndex],original=catalog.items[row?.itemId],candidate=catalog.items[itemId];
-  if(!isAvailable(candidate,options))return null;
+  if(!isAvailable(candidate,options,catalog))return null;
   if(!row||!candidate||!original||candidate.id===original.id||isOptic(original)||isOptic(candidate)||!samePerformanceStats(original,candidate))return null;
   const parent=rows[row.parent-1]?.itemId??options.weaponId;
   if(!catalog.items[parent]?.slots.find(s=>s.id===row.slotId)?.allowed.includes(itemId))return null;
@@ -37,6 +37,10 @@ export function replaceAttachment(catalog,options,rows,rowIndex,itemId){
     return false;
   }
   if(!assign(0))return null;
+  if(options.maxBudget!=null){
+    const cost=buildCost(catalog,options,next);
+    if(cost.unpriced||cost.priceRUB>options.maxBudget+0.01)return null;
+  }
   const paths=[catalog.items[options.weaponId].shortName];
   next.forEach((r,i)=>{
     r.path=`${paths[r.parent]} › ${r.slotName}`;

@@ -51,7 +51,15 @@ for (const item of Object.values(items)) {
 for(const item of Object.values(items))item.optic=isOptic(item);
 classifyOpticMounts(items);
 const barterCount=importBarters(barters,source,locale,items);
-const digest=await crypto.subtle.digest('SHA-256',new TextEncoder().encode('catalog-v6-barters'+JSON.stringify(overrides)+raw.text+names.text+barters.text));
+for(const weapon of Object.values(items).filter(item=>item.types.includes('gun'))){
+  const preset=source.items[source.items[weapon.id].properties.defaultPreset],parts={};
+  for(const part of preset?.containsItems??[]){
+    const item=items[part.item];
+    if(item?.types.includes('mods'))parts[part.item]=(parts[part.item]??0)+part.count;
+  }
+  weapon.factoryParts=parts;
+}
+const digest=await crypto.subtle.digest('SHA-256',new TextEncoder().encode('catalog-v7-factory-parts'+JSON.stringify(overrides)+raw.text+names.text+barters.text));
 const version=Array.from(new Uint8Array(digest),b=>b.toString(16).padStart(2,'0')).join('').slice(0,16);
 const data = { meta: { schemaVersion:1, version, fetchedAt: raw.fetchedAt, sourceModified: raw.modified, source: base, localeSource: `${base}_en`, gameMode: 'regular', weaponCount: Object.values(items).filter(i => i.types.includes('gun')).length, modCount: Object.values(items).filter(i => !i.types.includes('gun')).length }, items };
 validateCatalog(data);

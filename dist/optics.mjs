@@ -3,15 +3,28 @@ import { isAvailable } from './availability.mjs';
 const opticCategories = new Set(['Scope','Assault scope','Reflex sight','Compact reflex sight','Special scope']);
 export const isOptic = item => Boolean(item?.optic || opticCategories.has(item?.category));
 export const isIronSight = item => item?.category==='Ironsight';
+export function ironSightKinds(item,slot){
+  if(!isIronSight(item))return [];
+  if(['mod_sight_front','mod_sight_rear'].includes(slot.key))return [slot.key];
+  const kinds=[];
+  if(/\bfront\b/i.test(item.name))kinds.push('mod_sight_front');
+  if(/\brear\b/i.test(item.name))kinds.push('mod_sight_rear');
+  return kinds;
+}
 export const isIronSightSlot = (slot,items) => ['mod_sight_front','mod_sight_rear'].includes(slot.key)&&slot.allowed.some(id=>isIronSight(items[id]));
-export function availableIronSightKinds(catalog,weaponId){
+export function availableIronSightKinds(catalog,weaponId,options={}){
   const seen=new Set(),kinds=new Set();
   function visit(id){
     if(seen.has(id))return;seen.add(id);
-    const item=catalog.items[id];if(!item||isOptic(item))return;
+    const item=catalog.items[id];if(!isAvailable(item,{...options,weaponId},catalog)||isOptic(item))return;
     for(const slot of item.slots){
-      if(isIronSightSlot(slot,catalog.items))kinds.add(slot.key);
-      for(const child of slot.allowed)visit(child);
+      for(const child of slot.allowed){
+        // Native detachable sight slots remain required. An unavailable optional
+        // adapter must not create another sight requirement for the base weapon.
+        if(id===weaponId||isAvailable(catalog.items[child],{...options,weaponId},catalog))
+          for(const kind of ironSightKinds(catalog.items[child],slot))kinds.add(kind);
+        visit(child);
+      }
     }
   }
   visit(weaponId);return [...kinds];
@@ -39,7 +52,7 @@ export function reachableOptics(catalog, weaponId, options={}) {
   const visited=new Set(), found=[];
   function visit(id){
     if(visited.has(id))return;visited.add(id);
-    const item=catalog.items[id];if(!isAvailable(item,{...options,weaponId}))return;
+    const item=catalog.items[id];if(!isAvailable(item,{...options,weaponId},catalog))return;
     if(isOptic(item)){found.push(item);return;}
     for(const slot of item.slots)for(const child of slot.allowed)visit(child);
   }

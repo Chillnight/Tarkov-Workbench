@@ -1,10 +1,12 @@
 // Author: CA
-import { isOptic, isIronSight, isIronSightSlot, availableIronSightKinds } from './optics.mjs';
+import { isOptic, isIronSight, isIronSightSlot, ironSightKinds, availableIronSightKinds } from './optics.mjs';
+import {factoryPartCount} from './factory-parts.mjs';
 import { isAvailable } from './availability.mjs';
 import { cheapestOffer,buildCost } from './traders.mjs';
 import {mountProfile,isSpecialMount} from './mount-profiles.mjs';
 import {MAGAZINE_MINIMUMS} from './magazine-preferences.mjs';
-export const ENGINE_VERSION = '1.8.4';
+import {dominatedLeafNodes} from './equivalent-parts.mjs';
+export const ENGINE_VERSION = '1.9.0.2';
 const clamp = value => Math.min(100, Math.max(0, value));
 const rounded = value => Math.round(value * 1e8) / 1e8;
 function expression(terms) {
@@ -24,7 +26,7 @@ export function createProblem(catalog, options) {
   const nodes = [], byId = new Map(), visiting = new Set(), slots = [], missing = new Set();
   const usefulMemo = new Map(), usefulActive = new Set();
   function useful(id) {
-    if(items[id]&&!isAvailable(items[id],options))return false;
+    if(items[id]&&!isAvailable(items[id],options,catalog))return false;
     if(usefulMemo.has(id))return usefulMemo.get(id);
     if(usefulActive.has(id))throw new Error('Cyclic attachment data: no safe build is possible.');
     const item=items[id];if(!item)return true;
@@ -46,13 +48,13 @@ export function createProblem(catalog, options) {
       for (const absent of slot.missing ?? []) missing.add(absent);
       const isMagazine = slot.key === 'mod_magazine';
       const ironSights = !scopeId && isIronSightSlot(slot,items);
-      const required = slot.required || (isMagazine && (magazine > 0 || magazineId)) || ironSights;
+      const required = slot.required || (isMagazine && (magazine > 0 || magazineId));
       const entry = { ...slot, parent: node, required, edges: [] };
       node.slots.push(entry); slots.push(entry);
       for (const childId of slot.allowed) {
         const child = items[childId];
         if (!child) { missing.add(childId); continue; }
-        if (!isAvailable(child,options)) continue;
+        if (!isAvailable(child,options,catalog)) continue;
         if (sound === 'unsilenced' && child.suppressor) continue;
         if (isOptic(child) && childId !== scopeId) continue;
         if(ironSights&&!isIronSight(child))continue;
@@ -81,6 +83,13 @@ export function createProblem(catalog, options) {
   const constraints = [], bounds = [], binaries = [], integers = [], edges = slots.flatMap(s=>s.edges);
   if(!isAvailable(weapon,options))constraints.push(`${root.x} = 0`);
   for (const node of nodes) {
+    const factoryCount=factoryPartCount(node.item,options,catalog);
+    if(factoryCount){
+      if(!cheapestOffer(node.item,options))constraints.push(`${node.x} <= ${factoryCount}`);
+      node.purchase=`p${node.index}`;
+      integers.push(node.purchase);bounds.push(`0 <= ${node.purchase} <= ${node.max}`);
+      constraints.push(`${node.purchase} - ${node.x} >= ${-factoryCount}`);
+    }
     if (node.max === 1) binaries.push(node.x); else {
       integers.push(node.x); binaries.push(node.present);
       constraints.push(`${node.x} - ${node.max} ${node.present} <= 0`,`${node.x} - ${node.present} >= 0`);
@@ -134,17 +143,23 @@ export function createProblem(catalog, options) {
     const chosen=byId.get(scopeId);
     constraints.push(chosen?`${chosen.x} = 1`:`${root.x} = 0`);
   }else{
-    for(const kind of availableIronSightKinds(catalog,weaponId)){
-      const sightEdges=edges.filter(e=>e.slot.key===kind&&isIronSight(e.node.item));
+    for(const kind of availableIronSightKinds(catalog,weaponId,options)){
+      const sightEdges=edges.filter(e=>ironSightKinds(e.node.item,e.slot).includes(kind));
       constraints.push(`${expression(sightEdges.map(e=>[1,e.name]))} >= 1`);
     }
   }
+  const dominated=dominatedLeafNodes(catalog,options,nodes);
+  for(const node of dominated)constraints.push(`${node.x} = 0`);
   const ergoTerms = nodes.map(n=>[n.item.ergo,n.x]);
   const recoilTerms = nodes.map(n=>[n.item.recoil,n.x]);
   const countTerms = nodes.map(n=>[1,n.x]);
   const weightTerms = nodes.map(n=>[n.item.weight??0,n.x]);
-  const priceTerms=nodes.filter(n=>n!==root).map(n=>[cheapestOffer(n.item,options)?.priceRUB??0,n.x]);
-  const unpricedTerms=nodes.filter(n=>n!==root&&!(cheapestOffer(n.item,options)?.priceRUB>0)).map(n=>[1,n.x]);
+  const priceTerms=nodes.filter(n=>n!==root).map(n=>[cheapestOffer(n.item,options)?.priceRUB??0,n.purchase??n.x]);
+  const unpricedTerms=nodes.filter(n=>n!==root&&!(cheapestOffer(n.item,options)?.priceRUB>0)).map(n=>[1,n.purchase??n.x]);
+  if(options.maxBudget!==null&&options.maxBudget!==undefined){
+    constraints.push(`${expression(unpricedTerms)} = 0`);
+    constraints.push(`${expression(priceTerms)} <= ${options.maxBudget}`);
+  }
   const magazineFitTerms=slots.filter(s=>s.key==='mod_magazine').flatMap(s=>s.edges.filter(e=>e.node.item.capacity>0).map(e=>[Math.min(e.node.item.capacity,magazine),e.name]));
   // Count sight-supporting mounts, including mixed-purpose rails, but not magwells.
   const sightMemo=new Map();
@@ -165,7 +180,7 @@ export function createProblem(catalog, options) {
     const terms = {ergo:ergoTerms,count:countTerms,recoil:recoilTerms,mounts:mountTerms,weight:weightTerms,profile:highMountTerms,special:specialMountTerms,nonLow:nonLowMountTerms,price:priceTerms,unpriced:unpricedTerms,magazineFit:magazineFitTerms,feasibility:[]}[objective];
     return `${['ergo','magazineFit'].includes(objective) ? 'Maximize' : 'Minimize'}\n obj: ${expression(terms)}\nSubject To\n${constraints.concat(extra).map((c,i)=>` c${i}: ${c}`).join('\n')}\nBounds\n${bounds.join('\n')}\nBinary\n${binaries.join(' ')}\n${integers.length ? `General\n${integers.join(' ')}\n` : ''}End`;
   }
-  return { root,nodes,slots,edges,lp,ergoTerms,recoilTerms,mountTerms,highMountTerms,specialMountTerms,nonLowMountTerms,weightTerms,countTerms,priceTerms,unpricedTerms,magazineFitTerms,missing:[...missing],conflictCount:conflictPairs.size,byId };
+  return { root,nodes,slots,edges,lp,ergoTerms,recoilTerms,mountTerms,highMountTerms,specialMountTerms,nonLowMountTerms,weightTerms,countTerms,priceTerms,unpricedTerms,magazineFitTerms,missing:[...missing],conflictCount:conflictPairs.size,dominatedCount:dominated.length,byId };
 }
 export function validateBuild(catalog, options, rows) {
   const items=catalog.items, root=items[options.weaponId], errors=[];
@@ -173,12 +188,14 @@ export function validateBuild(catalog, options, rows) {
   for(let index=0;index<occurrences.length;index++) {
     const row=occurrences[index], item=items[row.itemId];
     if(!item){errors.push('Unknown item');continue;}
-    if(!isAvailable(item,options))errors.push(`Item excluded by availability settings: ${item.shortName}`);
+    if(!isAvailable(item,options,catalog))errors.push(`Item excluded by availability settings: ${item.shortName}`);
+    const factoryCount=factoryPartCount(item,options,catalog);
+    if(factoryCount&&!cheapestOffer(item,options)&&occurrences.filter(r=>r.itemId===item.id).length>factoryCount)errors.push(`Factory quantity exceeded: ${item.shortName}`);
     if(index>0 && (!Number.isInteger(row.parent)||row.parent<0||row.parent>=index)) {errors.push('Invalid assembly chain');continue;}
     for(const slot of item.slots) {
       const children=occurrences.filter((r,i)=>i>0&&r.parent===index&&r.slotId===slot.id);
       const ironSights=!options.scopeId&&isIronSightSlot(slot,items);
-      const required=slot.required||(slot.key==='mod_magazine'&&(options.magazine>0||options.magazineId))||ironSights;
+      const required=slot.required||(slot.key==='mod_magazine'&&(options.magazine>0||options.magazineId));
       if(children.length>1||(required&&children.length!==1)) errors.push(`Invalid slot assignment: ${item.shortName} / ${slot.name}`);
       for(const child of children) {
         if(!slot.allowed.includes(child.itemId)) errors.push('Incompatible attachment');
@@ -198,8 +215,8 @@ export function validateBuild(catalog, options, rows) {
   if(silenced!==(options.sound==='silenced')) errors.push('Suppressor requirement not met');
   const optics=occurrences.filter(r=>isOptic(items[r.itemId]));
   if(options.scopeId ? optics.length!==1||optics[0]?.itemId!==options.scopeId : optics.length!==0)errors.push('Selected optic requirement not met');
-  if(!options.scopeId)for(const kind of availableIronSightKinds(catalog,options.weaponId)){
-    if(!occurrences.some((r,i)=>i>0&&isIronSight(items[r.itemId])&&items[occurrences[r.parent]?.itemId]?.slots.some(s=>s.id===r.slotId&&s.key===kind)))errors.push(`Missing iron sight: ${kind}`);
+  if(!options.scopeId)for(const kind of availableIronSightKinds(catalog,options.weaponId,options)){
+    if(!occurrences.some((r,i)=>i>0&&items[occurrences[r.parent]?.itemId]?.slots.some(s=>s.id===r.slotId&&ironSightKinds(items[r.itemId],s).includes(kind))))errors.push(`Missing iron sight: ${kind}`);
   }
   const carriesOptic=index=>occurrences.some((r,i)=>
     i>index&&r.parent===index&&(
@@ -216,6 +233,7 @@ export function validateBuild(catalog, options, rows) {
 export function optimize(catalog, options, solver, progress=()=>{}) {
   if(!['ergo','recoil','balanced'].includes(options.mode)) throw new Error('Invalid build objective.');
   if(!Number.isFinite(options.balance)||options.balance<0||options.balance>100) throw new Error('Invalid ergonomics threshold.');
+  if(options.maxBudget!==null&&options.maxBudget!==undefined&&(!Number.isSafeInteger(options.maxBudget)||options.maxBudget<1||options.maxBudget>100000000))throw new Error('Invalid attachment budget.');
   const started=Date.now(), problem=createProblem(catalog,options);
   const {nodes,lp,ergoTerms,recoilTerms,mountTerms,highMountTerms,specialMountTerms,nonLowMountTerms,weightTerms,countTerms,priceTerms,unpricedTerms,magazineFitTerms}=problem;
   const extra=[]; let allOptimal=true, latest, maxErgo=null, floor=null;
@@ -331,6 +349,8 @@ export function optimize(catalog, options, solver, progress=()=>{}) {
   if([...remaining.values()].some(v=>v!==0)) throw new Error('The result contains unattached parts.');
   const errors=validateBuild(catalog,options,rows);
   if(errors.length) throw new Error(`Compatibility validation failed: ${errors.join('; ')}`);
+  const cost=buildCost(catalog,options,rows);
+  if(options.maxBudget!=null&&(cost.unpriced||cost.priceRUB>options.maxBudget+0.01))throw new Error('The result exceeds the attachment budget.');
   const rawErgo=sum(latest,ergoTerms), recoil=sum(latest,recoilTerms), weapon=problem.root.item;
   if(practical.applied&&(baselineErgo-clamp(rawErgo)>4+1e-5||Math.abs(recoil-baselineRecoil)>1e-6))throw new Error('Practical mounting limits were not met.');
   if(floor>0&&clamp(rawErgo)<floor-1e-5) throw new Error('The ergonomics threshold was not met.');
@@ -339,5 +359,5 @@ export function optimize(catalog, options, solver, progress=()=>{}) {
   const magazineCapacity=rows.filter(row=>magazineSlotIds.has(row.slotId)).reduce((capacity,row)=>Math.max(capacity,problem.byId.get(row.itemId)?.item.capacity??0),0)||null;
   const balanceTarget=options.mode==='balanced'?options.balance:null;
   const balanceShortfall=balanceTarget===null?0:rounded(Math.max(0,balanceTarget-clamp(rawErgo)));
-  return {status:allOptimal&&problem.missing.length===0?'optimal':'feasible',rows,cost:buildCost(catalog,options,rows),ergo:clamp(rawErgo),rawErgo,recoil,vertical:Math.max(0,weapon.vertical*(1+recoil)),horizontal:Math.max(0,weapon.horizontal*(1+recoil)),weight,magazineCapacity,maxErgo,floor,balanceTarget,balanceShortfall,practical,seconds:(Date.now()-started)/1000,considered:nodes.length,conflictCount:problem.conflictCount,missing:problem.missing,engine:ENGINE_VERSION};
+  return {status:allOptimal&&problem.missing.length===0?'optimal':'feasible',rows,cost,ergo:clamp(rawErgo),rawErgo,recoil,vertical:Math.max(0,weapon.vertical*(1+recoil)),horizontal:Math.max(0,weapon.horizontal*(1+recoil)),weight,magazineCapacity,maxErgo,floor,balanceTarget,balanceShortfall,practical,seconds:(Date.now()-started)/1000,considered:nodes.length,conflictCount:problem.conflictCount,missing:problem.missing,engine:ENGINE_VERSION};
 }

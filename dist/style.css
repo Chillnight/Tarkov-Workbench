@@ -14,6 +14,7 @@ dialog{color:var(--ink);background:var(--bg);border:1px solid #52614b;border-rad
 .availability-toggle{display:flex!important;align-items:center;gap:10px;cursor:pointer}.availability-toggle input{width:18px;height:18px;flex:none;accent-color:var(--accent,#c5f576)}.availability-status{font-size:11px;line-height:1.6;color:#c5f576}.availability-details{font-size:12px;margin-top:10px}.availability-details summary{cursor:pointer}.availability-details ul{max-height:230px;overflow:auto;padding-left:18px}.availability-details li{margin:12px 0;line-height:1.5}.availability-details small{display:block;color:#a5b4b7}
 
 .mounting-summary{padding:12px 14px;border:1px solid #536846;background:#202a1c;color:var(--acid);font-size:.85rem;line-height:1.6}
+.segments button[data-unavailable=true]{opacity:.5;cursor:help}.feedback-dialog{max-width:540px}.feedback-dialog h2{margin:0 0 16px;font-size:1.55rem}.feedback-dialog>p{color:var(--muted);line-height:1.7;font-size:.9rem}
 
 /* Author: CA */
 .trader-levels{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:15px;margin:24px 0}.trader-levels label{margin:0}.trader-levels select{margin-top:8px}#magazine-capacity-field{margin-top:14px}#settings-dialog{max-width:800px}#settings-error{color:var(--warn)}.vendor-price{font-size:.76rem;color:var(--acid);line-height:1.6;margin:8px 0}.cost-summary{color:var(--muted);font-size:.85rem;line-height:1.6}@media(max-width:620px){.trader-levels{grid-template-columns:repeat(2,minmax(0,1fr))}}

@@ -1,4 +1,5 @@
 import {cheapestOffer} from './traders.mjs';
+import {isIncludedFactoryPart} from './factory-parts.mjs';
 // Author: CA
 // Reviewed 2026-09-30. Explicit item IDs: Ref/noFlea alone does not imply an Arena unlock.
 // Sources and maintenance notes: docs/AVAILABILITY.md.
@@ -25,7 +26,7 @@ const groups = {
 export const ARENA_UNLOCKS = Object.freeze(Object.fromEntries(Object.entries(groups).flatMap(([source,ids])=>ids.map(id=>[id,source]))));
 export const arenaUnlock = item => ARENA_UNLOCKS[item?.id] ?? null;
 export const isUnderbarrelLauncher = item => item?.category==='UBGL'||item?.categories?.includes('55818b014bdc2ddc698b456b');
-export const isAvailable = (item,options={}) => Boolean(item) && (options.excludeArenaUnlocks===false || !arenaUnlock(item)) &&
+export const isAvailable = (item,options={},catalog) => Boolean(item) && (options.excludeArenaUnlocks===false || !arenaUnlock(item)) &&
   (options.allowGrenadeLaunchers===true||!isUnderbarrelLauncher(item)) &&
-  (!options.restrictTraders||item.id===options.weaponId||Boolean(cheapestOffer(item,options)));
+  (!options.restrictTraders||item.id===options.weaponId||isIncludedFactoryPart(item,options,catalog)||Boolean(cheapestOffer(item,options)));
 export const availabilityLabel = options => options.excludeArenaUnlocks===false ? 'Arena unlocks allowed' : 'Known Arena unlocks excluded';

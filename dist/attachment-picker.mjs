@@ -1,7 +1,10 @@
 // Author: CA
 import {matchesOpticFilter,zoomLabel} from './optics.mjs';
 import {offerLabel} from './traders.mjs';
-export function setupAttachmentPickers({getCatalog,getOptions,imageURL,onSelect}){
+export function attachmentCacheKey(catalog,options,kind){
+  return JSON.stringify({version:catalog.meta.version,kind,weaponId:options.weaponId,sound:options.sound,scopeId:kind==='scope'?null:options.scopeId,magazineId:kind==='magazine'?null:options.magazineId,magazine:kind==='magazine'?1:options.magazine,maxBudget:options.maxBudget??null,excludeArenaUnlocks:options.excludeArenaUnlocks,allowGrenadeLaunchers:options.allowGrenadeLaunchers,restrictTraders:options.restrictTraders,traderLevels:options.traderLevels,includeQuestOffers:options.includeQuestOffers,includeBarters:options.includeBarters});
+}
+export function setupAttachmentPickers({getCatalog,getOptions,imageURL,onSelect,validate=()=>true}){
   const $=id=>document.getElementById(id),cache=new Map();
   let worker=null,active=null,entries=[],progress=null,sequence=0;
   function stop(){sequence++;worker?.terminate();worker=null;}
@@ -17,7 +20,7 @@ export function setupAttachmentPickers({getCatalog,getOptions,imageURL,onSelect}
       card.setAttribute('aria-pressed',String(options[kind==='scope'?'scopeId':'magazineId']===item.id));
       const img=document.createElement('img');img.src=imageURL(item.icon);img.alt='';img.loading='lazy';img.width=80;img.height=64;
       const copy=document.createElement('span');copy.className='scope-card-copy';
-      for(const [tag,cls,text] of [['b','',item.shortName],['span','scope-full',item.name],['span','scope-meta',`${kind==='scope'?zoomLabel(item):item.capacity+' rounds'} · ${item.ergo>0?'+':''}${item.ergo} Ergo`],['span','scope-meta',offerLabel(item,options)]]){
+      for(const [tag,cls,text] of [['b','',item.shortName],['span','scope-full',item.name],['span','scope-meta',`${kind==='scope'?zoomLabel(item):item.capacity+' rounds'} · ${item.ergo>0?'+':''}${item.ergo} Ergo`],['span','scope-meta',offerLabel(item,options,getCatalog())]]){
         const el=document.createElement(tag);el.className=cls;el.textContent=text;copy.append(el);
       }
       card.append(img,copy);card.addEventListener('click',()=>{onSelect(kind,item.id);$(`${kind}-dialog`).close();});grid.append(card);
@@ -25,10 +28,11 @@ export function setupAttachmentPickers({getCatalog,getOptions,imageURL,onSelect}
     if(!visible.length){const p=document.createElement('p');p.className='empty';p.textContent=progress&&!progress.done?'Checking complete assemblies and available mounts …':'No matching compatible options. Try another search, suppressor variant, magazine choice or trader settings.';grid.append(p);}
   }
   function open(kind){
+    if(!validate())return;
     stop();active=kind;entries=[];progress={done:false,checked:0,total:0};
     const catalog=getCatalog(),options=getOptions();
     if(!options.weaponId)return;
-    const key=JSON.stringify({version:catalog.meta.version,kind,weaponId:options.weaponId,sound:options.sound,scopeId:kind==='scope'?null:options.scopeId,magazineId:kind==='magazine'?null:options.magazineId,magazine:kind==='magazine'?1:options.magazine,excludeArenaUnlocks:options.excludeArenaUnlocks,allowGrenadeLaunchers:options.allowGrenadeLaunchers,restrictTraders:options.restrictTraders,traderLevels:options.traderLevels,includeQuestOffers:options.includeQuestOffers,includeBarters:options.includeBarters});
+    const key=attachmentCacheKey(catalog,options,kind);
     $(`${kind}-dialog`).showModal();$(`${kind}-search`).focus();
     if(cache.has(key)){progress=cache.get(key);entries=progress.ids.map(id=>catalog.items[id]);render();return;}
     render();const current=sequence;worker=new Worker('./choices-worker.mjs',{type:'module'});

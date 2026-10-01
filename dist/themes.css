@@ -1,0 +1,23 @@
+/* Author: CA */
+.data-tools #settings-open,.data-tools #update-data{display:inline-flex;align-items:center;justify-content:center;box-sizing:border-box;height:42px;min-height:42px;padding:0 13px;vertical-align:middle}
+.theme-setting{border:0;border-top:1px solid var(--line);border-bottom:1px solid var(--line);padding:18px 0;margin:20px 0}.theme-setting legend{font-size:.9rem;padding-right:12px}.theme-options{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:9px}.theme-options button{display:flex;align-items:center;justify-content:center;gap:9px;padding:10px 7px;min-height:50px;font-size:.79rem;text-align:center}.theme-swatch{width:17px;height:17px;border-radius:50%;flex:none;border:2px solid #ffffff55}.swatch-original{background:#c5f576}.swatch-blue{background:#91c9f7}.swatch-bourbon{background:#f2a9ba}.swatch-graphite{background:#d2d8df}.theme-options button[aria-pressed=true]{box-shadow:inset 0 -3px var(--acid)}
+.budget-field{border-top:1px solid var(--line);padding-top:18px}.budget-field #budget-entry{margin-top:13px}.budget-field #budget-entry label{font-size:.79rem;margin-bottom:7px}.budget-field input[type=number]{width:100%;min-height:44px;padding:9px 12px;border:1px solid #475256;border-radius:3px;background:#101516;color:var(--ink)}
+.shopping-list{border:1px solid var(--line);border-left:3px solid var(--acid);padding:14px 16px;margin:16px 0 20px;background:var(--panel);font-size:.82rem;line-height:1.55}.shopping-list summary{font-weight:650;color:var(--acid)}.shopping-list>button{margin:14px 0 3px}.shopping-list h3{font-size:.85rem;font-weight:650;margin:19px 0 6px;color:var(--ink)}.shopping-list ul{list-style:none;padding:0;margin:0}.shopping-list li{display:flex;justify-content:space-between;gap:18px;border-top:1px solid var(--line);padding:8px 0}.shopping-list li b{font-weight:550}.shopping-list li span{color:var(--muted);text-align:right;max-width:50%}
+:root[data-theme=blue]{--bg:#0c141b;--panel:#17212b;--line:#344554;--muted:#afc1ce;--ink:#eef7ff;--acid:#91c9f7;--accent-bg:#213547;--accent-border:#557b99;--hover-bg:#243d50;--notice-bg:#1b3141;--notice-ink:#d5ecff}
+:root[data-theme=bourbon]{--bg:#1a1218;--panel:#251923;--line:#51404b;--muted:#c6b0be;--ink:#fff1f4;--acid:#f2a9ba;--accent-bg:#3b2534;--accent-border:#a56580;--hover-bg:#4a2b3c;--notice-bg:#392431;--notice-ink:#ffe0e9}
+:root[data-theme=graphite]{--bg:#0b0d10;--panel:#171a1f;--line:#393f47;--muted:#b4bac3;--ink:#f3f5f8;--acid:#d2d8df;--accent-bg:#30343a;--accent-border:#858d97;--hover-bg:#343a42;--notice-bg:#272d34;--notice-ink:#f0f2f4}
+:root[data-theme]:not([data-theme=original]){--accent:var(--acid)}
+:root[data-theme]:not([data-theme=original]) .loyalty-boxes button{border-color:var(--line);background:var(--bg)}
+:root[data-theme]:not([data-theme=original]) button[aria-pressed=true]{background:var(--accent-bg)}
+:root[data-theme]:not([data-theme=original]) .notice{background:var(--notice-bg);border-color:var(--accent-border);color:var(--notice-ink)}
+:root[data-theme]:not([data-theme=original]) .notice.error{background:#30251b;border-color:#655137;color:#f5c083}
+:root[data-theme]:not([data-theme=original]) .weapon-card{background:radial-gradient(ellipse at 75% 80%,var(--accent-bg) 0,transparent 55%),var(--panel)}
+:root[data-theme]:not([data-theme=original]) .weapon-option.active,:root[data-theme]:not([data-theme=original]) .weapon-option:hover{background:var(--hover-bg)}
+:root[data-theme]:not([data-theme=original]) .scope-change,:root[data-theme]:not([data-theme=original]) .mounting-summary{background:var(--accent-bg);border-color:var(--accent-border)}
+:root[data-theme]:not([data-theme=original]) .weapon-popup,:root[data-theme]:not([data-theme=original]) dialog{background:var(--panel);border-color:var(--accent-border)}
+:root[data-theme]:not([data-theme=original]) .part.selected-scope-part{background:var(--accent-bg)}
+:root[data-theme]:not([data-theme=original]) .availability-status{color:var(--acid)}
+:root[data-theme]:not([data-theme=original]) .scope-badge{border-color:var(--accent-border)}
+:root[data-theme]:not([data-theme=original]) .loyalty-boxes button[aria-pressed=true]{background:var(--accent-bg)}
+:root[data-theme]:not([data-theme=original]) .primary{color:#10151a}
+@media(max-width:760px){.theme-options{grid-template-columns:repeat(2,minmax(0,1fr))}.shopping-list li{display:block}.shopping-list li span{display:block;text-align:left;max-width:none;margin-top:4px}}

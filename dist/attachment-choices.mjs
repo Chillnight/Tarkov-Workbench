@@ -7,10 +7,10 @@ export function reachableMagazines(catalog,weaponId,options={}){
   const seen=new Set(),found=new Map();
   function visit(id){
     if(seen.has(id))return;seen.add(id);
-    const item=catalog.items[id];if(!isAvailable(item,{...options,weaponId})||isOptic(item))return;
+    const item=catalog.items[id];if(!isAvailable(item,{...options,weaponId},catalog)||isOptic(item))return;
     for(const slot of item.slots)for(const childId of slot.allowed){
       const child=catalog.items[childId];
-      if(slot.key==='mod_magazine'&&child?.capacity>0&&isAvailable(child,{...options,weaponId}))found.set(childId,child);
+      if(slot.key==='mod_magazine'&&child?.capacity>0&&isAvailable(child,{...options,weaponId},catalog))found.set(childId,child);
       visit(childId);
     }
   }

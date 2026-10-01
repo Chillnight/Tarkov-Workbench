@@ -1,4 +1,4 @@
-TARKOV WORKBENCH 1.8.5 - ONLINE SETUP EDITION
+TARKOV WORKBENCH 1.9.0.2 - ONLINE SETUP EDITION
 Author: CA
 
 Keep this whole folder together. Start Tarkov-Workbench.exe in this folder.
@@ -16,6 +16,12 @@ It downloads new or changed images; unchanged local images are reused.
 A failed or cancelled download leaves your last saved database intact.
 The source is maintained by the Tarkov community and can lag behind EFT.
 
+The app includes a trader shopping list for each calculated build, an
+optional maximum attachment budget, and color themes in Settings. The
+original green theme stays the default. The budget excludes the weapon,
+uses saved RUB-equivalent vendor prices, and treats barter prices as
+estimates. Parts without a known value cannot enter a budget build.
+
 This ZIP contains no Escape from Tarkov item images or database snapshot.
 It requires an internet connection for first setup. There is no browser,
 account, installer or background update. Keep all DLLs and folders beside
@@ -24,3 +30,11 @@ the EXE. This edition is unsigned and Windows may block unfamiliar apps.
 Escape from Tarkov and its item images belong to Battlestate Games or
 their respective rights holders. Independent community tool, not operated
 by Battlestate Games. Electron and Chromium licenses are in this folder.
+
+Version 1.9.0.2 checks complete suppressor assemblies and explains unavailable
+variants in a popup. Invalid budgets also show a popup. Scope and magazine
+lists refresh when the budget changes. Equivalent leaf choices are reduced
+before optimization without changing performance or compatibility priorities.
+Factory-preset parts remain available without standalone offers, and
+iron-sight routes are checked across the assembly.
+Factory parts are included with the selected weapon and need no extra purchase.

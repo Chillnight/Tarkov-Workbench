@@ -1,4 +1,5 @@
 // Author: CA
+import {factoryPartCount} from './factory-parts.mjs';
 export const TRADERS = Object.freeze([
   {id:'54cb50c76803fa8b248b4571',name:'Prapor'},
   {id:'54cb57776803fa99248b456e',name:'Therapist'},
@@ -25,7 +26,8 @@ export function eligibleOffers(item,options={}){
 export const cheapestOffer=(item,options)=>eligibleOffers(item,options)[0]??null;
 const vendor=offer=>`${TRADERS.find(t=>t.id===offer.trader)?.name??'Trader'} LL${offer.minTraderLevel}`;
 const recipe=offer=>offer.requiredItems.map(i=>`${i.count} × ${i.name}${Object.keys(i.attributes??{}).length?' ('+Object.entries(i.attributes).map(([k,v])=>`${k}: ${v}`).join(', ')+')':''}`).join(' + ');
-export function offerLabel(item,options){
+export function offerLabel(item,options,catalog,occurrence=1){
+  if(occurrence<=factoryPartCount(item,options,catalog))return 'Factory part · included with selected weapon';
   const offer=cheapestOffer(item,options);
   if(!offer){
     if(item?.barters?.length)return options.includeBarters===false?'Barter offers disabled in Settings':`Barter available · ${item.barters.map(vendor).join(' / ')} · locked by current settings`;
@@ -35,7 +37,13 @@ export function offerLabel(item,options){
   return `${vendor(offer)} · ${price}${offer.taskUnlock?' · quest unlock assumed':''}`;
 }
 export function buildCost(catalog,options,rows){
-  let priceRUB=0,unpriced=0,barterCount=0;
-  for(const row of rows){const offer=cheapestOffer(catalog.items[row.itemId],options);if(offer?.kind==='barter')barterCount++;if(offer&&value(offer)<Infinity)priceRUB+=offer.priceRUB;else unpriced++;}
-  return {priceRUB,unpriced,barterCount};
+  let priceRUB=0,unpriced=0,barterCount=0,factoryCount=0;
+  const used=new Map();
+  for(const row of rows){
+    const item=catalog.items[row.itemId],count=(used.get(row.itemId)??0)+1;used.set(row.itemId,count);
+    if(count<=factoryPartCount(item,options,catalog)){factoryCount++;continue;}
+    const offer=cheapestOffer(item,options);if(offer?.kind==='barter')barterCount++;
+    if(offer&&value(offer)<Infinity)priceRUB+=offer.priceRUB;else unpriced++;
+  }
+  return {priceRUB,unpriced,barterCount,factoryCount};
 }

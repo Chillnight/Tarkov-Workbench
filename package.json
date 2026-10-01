@@ -1,6 +1,6 @@
 {
   "name": "tarkov-workbench",
-  "version": "1.8.5",
+  "version": "1.9.0-2",
   "private": true,
   "description": "Escape from Tarkov weapon optimizer",
   "author": "CA",
@@ -42,6 +42,7 @@
       "executableName": "Tarkov-Workbench",
       "icon": "desktop/icon.ico",
       "signExecutable": false
-    }
+    },
+    "buildVersion": "1.9.0.2"
   }
 }

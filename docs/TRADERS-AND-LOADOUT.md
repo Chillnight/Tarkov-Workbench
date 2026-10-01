@@ -2,6 +2,14 @@
 
 Author: CA
 
+## Shopping list, budget and appearance (1.9)
+
+Each calculated build now includes an expandable trader shopping list. It groups required attachments by eligible vendor and separates cash purchases from barter trades. Repeated parts are counted together. Barter ingredients are shown for the number of trades needed, including rewards that contain multiple items. The list can be copied independently of the full build. The weapon, ammunition, stash contents and live trader stock are not included.
+
+The optional **Maximum attachment budget** on the main screen is a hard RUB-equivalent cap on the complete attachment assembly. The optimizer applies it while choosing parts, including adapters, the selected scope and the magazine. Unknown-price parts cannot enter a budget build. The saved best eligible offer supplies each price; barter prices are only ingredient-value estimates. Trader loyalty and quest settings still apply. If no complete assembly fits, the app reports an infeasible build rather than silently exceeding the cap. Manually swapped equivalent alternatives must also stay within it. The budget and its on/off state are saved locally; off is the default.
+
+Settings offers four appearance buttons: Original green (default), Steel blue, Bourbon and Graphite. Clicking one previews it; Cancel restores the saved choice, and Save settings retains it across restarts. Theme changes do not alter the optimizer or require a new database download.
+
 Version 1.8 adds pictured magazine selection, complete-assembly checks for the scope and magazine pickers, trader-level filtering and vendor price tie-breaking.
 
 ## Settings
@@ -14,7 +22,9 @@ Existing main-screen preferences remain on the main screen. **Allow underbarrel 
 
 The existing regular/PvP item export at https://json.tarkov.dev/regular/items includes `buyFromTrader` entries with trader ID, minimum loyalty level, quest requirement, currency, purchase price and RUB equivalent. The importer saves these offers with the item database. **Update database** refreshes them along with stats and compatibility, after the existing download confirmation. Startup remains offline.
 
-The chosen weapon is treated as already owned. Attachments, scopes, magazines and adapters must have an eligible cash or barter offer when trader filtering is enabled. The implementation does not model flea purchases, inventory, parts obtained by purchasing assembled weapon bundles, restock availability or individual purchase limits. Fence's randomized inventory is not guessed. Ref trades are included when the level, quest and Arena filters allow them. Missing offers are excluded in trader mode, rather than assumed available. Turn trader filtering off to plan with unrestricted attachments; Arena and launcher filters still apply.
+The chosen weapon and the parts in its recorded default preset are treated as already owned. Factory parts remain available without a separate trader offer and incur no additional purchase cost, up to the quantities included in that preset. Upgrades and extra copies require eligible cash or barter offers when trader filtering is enabled. Equivalent factory parts are kept before spending on replacements; objective stats and lower weight still take priority. The implementation does not model flea purchases, other inventory, restock availability or individual purchase limits. Fence's randomized inventory is not guessed. Ref trades are included when the level, quest and Arena filters allow them, including for factory parts. Missing prices alone do not exclude an eligible upgrade unless a budget is active. Turn trader filtering off to plan with unrestricted attachments; Arena and launcher filters still apply.
+
+Version 1.9.0.1 corrects factory-part availability, conflicting iron-sight routes and empty magazine choices caused by unsupported suppressor variants. The GUI disables variants without an available suppressor path and selects an available one. Old database snapshots can use reviewed factory-preset metadata bundled with the app; a database update imports current presets. Calculated caches from older optimizer versions are invalidated.
 
 Within equal Ergo/recoil results and part counts, the optimizer prefers available purchase offers and then minimizes their total RUB-equivalent cost. In practical mounting, mount count, ergonomics and weight retain priority before the final price comparison. Unknown prices are counted separately, never treated as a zero-cost purchase. The displayed subtotal excludes the weapon. With trader filtering disabled, any unpriced parts are explicitly listed in the cost summary. Prices are snapshot values, not a live checkout quote.
 
