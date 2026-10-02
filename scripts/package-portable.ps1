@@ -38,6 +38,8 @@ if (Test-Path -LiteralPath $stagePath) { Remove-Item -LiteralPath $stagePath -Re
 Copy-Item -LiteralPath $runtimePath -Destination $stagePath -Recurse
 $docsPath = Join-Path $stagePath 'docs'
 New-Item -ItemType Directory -Path $docsPath -Force | Out-Null
+$package = Get-Content -LiteralPath (Join-Path $projectRoot 'package.json') -Raw | ConvertFrom-Json
+@{app='Tarkov Workbench';distribution='portable';version=$package.build.buildVersion} | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $docsPath 'portable.json') -Encoding ascii
 
 Copy-Item -LiteralPath (Join-Path $projectRoot ('docs\' + $readmeName)) -Destination (Join-Path $docsPath 'README.txt')
 Copy-Item -LiteralPath (Join-Path $projectRoot 'docs\UPDATES.md') -Destination $docsPath
@@ -46,11 +48,6 @@ Copy-Item -LiteralPath (Join-Path $projectRoot 'docs\PRACTICAL-MOUNTS.md') -Dest
 Copy-Item -LiteralPath (Join-Path $projectRoot 'docs\TRADERS-AND-LOADOUT.md') -Destination $docsPath
 Copy-Item -LiteralPath (Join-Path $projectRoot 'dist\vendor\HIGHS-LICENSE.txt') -Destination $docsPath
 Copy-Item -LiteralPath (Join-Path $projectRoot 'LICENSE') -Destination (Join-Path $stagePath 'LICENSE.txt')
-$manifest = Get-ChildItem -LiteralPath $stagePath -File -Recurse | Sort-Object FullName | ForEach-Object {
-    $relativeName = $_.FullName.Substring($stagePath.Length + 1).Replace('\','/')
-    '{0}  {1}' -f (Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256).Hash,$relativeName
-}
-Set-Content -LiteralPath (Join-Path $docsPath 'SHA256SUMS.txt') -Value $manifest -Encoding ascii
 $stagedArchive = Join-Path $releasePath $archiveName
 $archiveEntries = Get-ChildItem -LiteralPath $stagePath -Force | Select-Object -ExpandProperty FullName
 Compress-Archive -LiteralPath $archiveEntries -DestinationPath $stagedArchive -CompressionLevel Optimal -Force
@@ -68,7 +65,6 @@ Copy-Item -LiteralPath $stagedArchive -Destination $archivePath -Force
 $zipHash = (Get-FileHash -LiteralPath $archivePath -Algorithm SHA256).Hash
 Set-Content -LiteralPath (Join-Path $projectRoot ($archiveName -replace '\.zip$','.sha256')) -Value "$zipHash  $archiveName" -Encoding ascii
 if (-not $Online) {
-    Copy-Item -LiteralPath (Join-Path $portablePath 'docs\SHA256SUMS.txt') -Destination (Join-Path $releasePath 'SHA256SUMS.txt') -Force
     Copy-Item -LiteralPath (Join-Path $projectRoot ('docs\' + $readmeName)) -Destination (Join-Path $releasePath 'README.txt') -Force
 }
 Write-Output "Portable folder: $portablePath"

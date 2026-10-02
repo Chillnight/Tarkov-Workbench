@@ -1,6 +1,16 @@
-# Database updates
+# Database and program updates
 
 Author: CA
+
+## Program updates
+
+**Check for updates** checks the latest stable release at [Chillnight/Tarkov-Workbench](https://github.com/Chillnight/Tarkov-Workbench/releases/latest). It is separate from **Update database**, needs no GitHub account and runs only when clicked. A numeric version comparison supports three- and four-component release tags, including `v1.9.0.3`. Equal or lower versions show **You’re up to date — No newer version was found**. Drafts and prereleases are not installed. Offline, rate-limited, malformed or incomplete responses show an error rather than claiming the app is current.
+
+If a newer release exists, the Windows portable app asks before **Download and restart**. It downloads the release ZIP and its matching `.sha256` asset from GitHub, checks the exact length and SHA-256 hash, and validates archive paths before extraction. No extra native dependency or signing certificate is added. Both assets must be published together using the existing portable filenames.
+
+The complete app is staged beside its current folder on the same drive. After verification, a hidden helper waits for this app to exit, retains the old folder in `.workbench-update-…/previous`, replaces the complete portable folder and starts the new EXE. Settings and the downloaded database under `AppData/Roaming/Tarkov Workbench` are kept. Leave the portable folder writable and close other copies before updating. No administrator permissions are requested. Source-code folders, linked folders and drive-root locations are refused. If preparation fails or is cancelled, the running app is unchanged; if replacement or launch fails, the helper retains or restores the old version and reports the failure on restart. Once the verified update begins restarting, cancellation is no longer available.
+
+The recovery folder also retains the download. Once the new version is working, you can delete that specific `.workbench-update-…` folder manually to reclaim space. Files placed beside the old EXE are retained in its backup; keep personal documents outside the application folder. Browser and development versions provide a direct portable-download link rather than rewriting source files. Manual extraction of a new ZIP into a separate folder remains available as a fallback.
 
 ## Update from inside the app
 

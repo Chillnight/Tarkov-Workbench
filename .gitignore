@@ -8,6 +8,7 @@ reports/
 release/
 Portable/
 Online-Portable/
+.workbench-update-*/
 Portable-SelfSigned/
 .signing/
 .env

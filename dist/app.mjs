@@ -1,6 +1,8 @@
 // Author: CA
 import * as storage from './storage.mjs';
 import {loadDatabase,setupDatabaseUpdates} from './database-ui.mjs';
+import {setupAppUpdates} from './app-update-ui.mjs';
+setupAppUpdates();
 import {createWeaponPicker,moddableWeapons} from './weapon-picker.mjs';
 import {setupAttachmentPickers} from './attachment-picker.mjs';
 import {reachableMagazines} from './attachment-choices.mjs';
