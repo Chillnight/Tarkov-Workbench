@@ -67,7 +67,7 @@ else {
     try {
       const outcome=JSON.parse((await readFile(outcomeFile,'utf8')).replace(/^\uFEFF/,''));
       await unlink(outcomeFile);
-      dialog.showErrorBox('Program update was not installed',`${outcome.message}\n\nDetails: ${outcome.log}`);
+      dialog.showErrorBox(outcome.title||'Program update was not installed',`${outcome.message}\n\nDetails: ${outcome.log}`);
     }catch{}
   }).catch(error=>{dialog.showErrorBox('Tarkov Workbench could not start',error.message);app.quit();});
   app.on('window-all-closed',()=>app.quit());

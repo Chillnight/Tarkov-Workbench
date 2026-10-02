@@ -55,7 +55,7 @@ The portable ZIP contains the app, but no downloaded Escape from Tarkov item dat
 
 **Update database** is manual. It validates a new snapshot before replacing the active one; a failed or cancelled update keeps your previous data. A changed database clears calculated results so you can recalculate with current parts. Feature and compatibility-rule changes still require a new app release. See [data updates](docs/UPDATES.md) for details.
 
-**Check for updates** is a separate, manual program-update button. It checks the latest stable GitHub Release; equal or older versions are never offered as updates. In the Windows portable app, confirm **Download and restart** to download the complete package, verify its SHA-256 checksum and replace the app files. Your database and settings stay in your user profile. The previous app folder is retained for recovery. Browser and source-development versions offer the portable ZIP instead. Nothing is checked or downloaded automatically on startup.
+**Check for updates** is a separate, manual program-update button. It checks the latest stable GitHub Release; equal or older versions are never offered as updates. In the Windows portable app, confirm **Download and restart** to download the complete package, verify its SHA-256 checksum and replace the app at the same location. Your database and settings stay in your user profile. After a successful update, the old version and temporary files are removed automatically. Browser and source-development versions offer the portable ZIP instead. Nothing is checked or downloaded automatically on startup.
 
 ## Build from source
 

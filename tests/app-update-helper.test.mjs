@@ -5,7 +5,8 @@ import { execFileSync } from 'node:child_process';
 import { mkdtemp, mkdir, writeFile, readFile, rm, access } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
+import { startUpdateHelper } from '../desktop/app-updater.mjs';
 
 const helper = fileURLToPath(new URL('../desktop/apply-update.ps1', import.meta.url));
 const createZip = `$ErrorActionPreference = 'Stop'
@@ -20,9 +21,9 @@ try { foreach ($file in $spec.files) {
 function powershell(args, env = {}) {
   return execFileSync('powershell.exe', ['-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', ...args], { windowsHide: true, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'], env: { ...process.env, ...env }, timeout: 30000 });
 }
-test('Windows helper validates archives, replaces full folders, retains backup and rolls back launch failures', { skip: process.platform !== 'win32' }, async () => {
-  for (const scenario of ['success', 'rollback', 'traversal', 'duplicate', 'missing', 'wrong-version']) {
-    const root = await mkdtemp(join(tmpdir(), 'workbench-helper-test-'));
+test('Windows helper validates archives, replaces full folders, cleans up and rolls back launch failures', { skip: process.platform !== 'win32' }, async () => {
+  for (const scenario of ['success', 'handoff', 'electron-handoff', 'rollback', 'traversal', 'duplicate', 'missing', 'wrong-version']) {
+    const root = await mkdtemp(join(tmpdir(), 'workbench helper test-'));
     const target = join(root, 'Portable app'), stage = join(root, '.workbench-update-test');
     const config = join(stage, 'update.json');
     try {
@@ -30,6 +31,8 @@ test('Windows helper validates archives, replaces full folders, retains backup a
       await mkdir(join(target, 'docs'));
       await writeFile(join(target, 'docs', 'portable.json'), JSON.stringify({ app: 'Tarkov Workbench', distribution: 'portable', version: '1.9.0.3' }));
       await mkdir(stage);
+      const stagedHelper = join(stage, 'apply-update.ps1');
+      await writeFile(stagedHelper, await readFile(helper));
       await writeFile(join(target, 'resources', 'app.asar'), 'old app');
       const launcher = join(process.env.SystemRoot, 'System32', 'where.exe');
       await writeFile(join(target, 'Tarkov-Workbench.exe'), await readFile(launcher));
@@ -40,17 +43,41 @@ test('Windows helper validates archives, replaces full folders, retains backup a
       if (scenario === 'missing') files.splice(1, 1);
       powershell(['-Command', createZip], { WB_UPDATE_TEST: JSON.stringify({ zip: join(stage, 'Tarkov-Workbench-Online-Portable.zip'), files }) });
       await writeFile(config, JSON.stringify({ target, stage, pid: 2147483647, version: '1.9.0.4', outcome: join(root, 'outcome.json') }));
-      const run = mode => powershell(['-File', helper, '-Config', config, '-Mode', mode]);
+      const run = mode => powershell(['-File', stagedHelper, '-Config', config, '-Mode', mode]);
       if (['traversal', 'duplicate', 'missing', 'wrong-version'].includes(scenario)) {
         assert.throws(() => run('Prepare'));
         assert.equal(await readFile(join(target, 'resources', 'app.asar'), 'utf8'), 'old app');
         await assert.rejects(access(join(root, 'outside.txt')));
       } else {
         run('Prepare');
-        if (scenario === 'success') {
-          run('Apply');
+        if (['success', 'handoff', 'electron-handoff'].includes(scenario)) {
+          if (scenario.endsWith('handoff')) {
+            // Exercise the production launch options and exit the real parent process.
+            const parent = join(root, scenario === 'electron-handoff' ? 'handoff-parent.cjs' : 'handoff-parent.mjs');
+            const body = `import {readFile,writeFile} from 'node:fs/promises';
+import {startUpdateHelper} from ${JSON.stringify(pathToFileURL(fileURLToPath(new URL('../desktop/app-updater.mjs', import.meta.url))).href)};
+const config=${JSON.stringify(config)},stage=${JSON.stringify(stage)};
+const settings=JSON.parse(await readFile(config,'utf8'));settings.pid=process.pid;
+await writeFile(config,JSON.stringify(settings));
+await startUpdateHelper(${JSON.stringify(stagedHelper)},config,stage);`;
+            const electron = scenario === 'electron-handoff';
+            await writeFile(parent, electron ? `const {app}=require('electron');app.setPath('userData',${JSON.stringify(join(root, 'test-profile'))});app.whenReady().then(async()=>{await import('data:text/javascript,'+encodeURIComponent(${JSON.stringify(body)}));app.quit();}).catch(error=>{console.error(error);app.exit(1);});` : `${body}\nprocess.exit(0);`);
+            const executable = electron ? fileURLToPath(new URL('../node_modules/electron/dist/electron.exe', import.meta.url)) : process.execPath;
+            const env = { ...process.env }; delete env.ELECTRON_RUN_AS_NODE;
+            execFileSync(executable, [parent], { cwd: target, windowsHide: true, timeout: 20000, stdio: 'pipe', env });
+            const deadline = Date.now() + 15000;
+            while (true) {
+              try { await access(stage); } catch (error) { if (error.code === 'ENOENT') break; throw error; }
+              if (Date.now() >= deadline) {
+                const details = await readFile(join(stage, 'update-error.txt'), 'utf8').catch(() => 'No helper error log.');
+                throw new Error(`The updater did not complete after the parent exited. ${details}`);
+              }
+              await new Promise(resolve => setTimeout(resolve, 100));
+            }
+          } else run('Apply');
           assert.equal(await readFile(join(target, 'resources', 'app.asar'), 'utf8'), 'new app');
-          assert.equal(await readFile(join(stage, 'previous', 'resources', 'app.asar'), 'utf8'), 'old app');
+          assert.equal(JSON.parse(await readFile(join(target, 'docs', 'portable.json'), 'utf8')).version, '1.9.0.4');
+          await assert.rejects(access(stage));
         } else {
           assert.throws(() => run('Apply'));
           assert.equal(await readFile(join(target, 'resources', 'app.asar'), 'utf8'), 'old app');
@@ -60,4 +87,19 @@ test('Windows helper validates archives, replaces full folders, retains backup a
       }
     } finally { await rm(root, { recursive: true, force: true, maxRetries: 5, retryDelay: 200 }); }
   }
+});
+
+test('handoff requires execution confirmation and reports an early exit or timeout', { skip: process.platform !== 'win32' }, async () => {
+  const root = await mkdtemp(join(tmpdir(), 'workbench-helper-readiness-'));
+  try {
+    const config = join(root, 'update.json'), script = join(root, 'helper.ps1');
+    await writeFile(config, '{}');
+    const fakeLaunch = command => `param($Config,$Mode)
+$worker=Start-Process -FilePath (Join-Path $PSHOME 'powershell.exe') -ArgumentList '-NoProfile -NonInteractive -Command "${command}"' -WindowStyle Hidden -PassThru
+Set-Content -LiteralPath (Join-Path (Split-Path -Parent $Config) 'helper-process') -Value $worker.Id -Encoding ascii`;
+    await writeFile(script, fakeLaunch('exit 0'));
+    await assert.rejects(startUpdateHelper(script, config, root), /stopped before confirming/);
+    await writeFile(script, fakeLaunch('Start-Sleep -Seconds 30'));
+    await assert.rejects(startUpdateHelper(script, config, root, { timeoutMs: 1500 }), /did not start in time/);
+  } finally { await rm(root, { recursive: true, force: true, maxRetries: 5, retryDelay: 200 }); }
 });

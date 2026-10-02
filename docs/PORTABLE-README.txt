@@ -1,9 +1,9 @@
-TARKOV WORKBENCH 1.9.0.4
+TARKOV WORKBENCH 1.9.0.5
 Author: CA
 
 Extract the entire ZIP to a new folder. Double-click Tarkov-Workbench.exe.
 Keep all extracted files and folders together; they are required.
-Close any older running instance first. The GUI header shows v1.9.0.4.
+Close any older running instance first. The GUI header shows v1.9.0.5.
 
 Windows 10/11 x64. No installation, browser, Node.js or account required.
 The root EXE starts the bundled Electron runtime directly. The application,
@@ -70,7 +70,7 @@ Selected scopes remain mandatory in every mode.
 Trader levels use clickable 1-4 boxes.
 Practical mounting prioritizes reviewed low-profile routes within four Ergo.
 
-Version 1.9.0.4 checks complete suppressor assemblies and explains unavailable
+Version 1.9.0.5 checks complete suppressor assemblies and explains unavailable
 variants in a popup. Invalid budgets also show a popup. Scope and magazine
 lists refresh when the budget changes. Equivalent leaf choices are reduced
 before optimization without changing performance or compatibility priorities.
@@ -82,6 +82,6 @@ PROGRAM UPDATES
 Check for updates is separate from Update database. It checks GitHub only
 when clicked. Equal or older releases are never offered as updates.
 Confirm Download and restart to download and verify the complete app ZIP.
-Your database and settings in your user profile are kept. The previous
-app folder is retained beside the app as a recovery backup.
+Your database and settings in your user profile are kept. The app stays
+at the same location; old and temporary files are removed after success.
 See UPDATES.md for recovery and manual download instructions.

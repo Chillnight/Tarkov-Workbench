@@ -3,6 +3,7 @@ import { createHash } from 'node:crypto';
 import { mkdtemp, readFile, writeFile, open, rm, lstat } from 'node:fs/promises';
 import { dirname, join, resolve, parse } from 'node:path';
 import { spawn } from 'node:child_process';
+import { setTimeout as delay } from 'node:timers/promises';
 import { checkForUpdate, checksumValue, ZIP_NAME } from '../dist/app-update.mjs';
 
 // Release downloads redirect to GitHub's asset CDN. Never follow an HTTP or unrelated redirect.
@@ -68,6 +69,34 @@ function runHelper(script, config, mode, signal) {
   });
 }
 
+// Detached PowerShell can silently exit without executing the script. Launch an
+// independent hidden Windows host, then confirm execution before quitting.
+export async function startUpdateHelper(script, config, stage, { signal, timeoutMs = 15000 } = {}) {
+  signal?.throwIfAborted();
+  // Finish the short launch handshake before handling cancellation, so its child
+  // can be stopped by PID rather than left waiting after a cancelled update.
+  await runHelper(script, config, 'Launch');
+  const pid = Number((await readFile(join(stage, 'helper-process'), 'utf8')).trim());
+  if (!Number.isSafeInteger(pid) || pid <= 0 || pid === process.pid) throw new Error('The update helper did not provide a valid process ID.');
+  const deadline = Date.now() + timeoutMs;
+  try {
+    while (true) {
+      signal?.throwIfAborted();
+      try {
+        if ((await readFile(join(stage, 'helper-ready'), 'utf8')).trim() === String(pid)) break;
+      } catch (error) { if (error.code !== 'ENOENT') throw error; }
+      try { process.kill(pid, 0); }
+      catch { throw new Error('The update helper stopped before confirming readiness. Your current app is still running.'); }
+      if (Date.now() >= deadline) throw new Error('The update helper did not start in time. Your current app is still running.');
+      await delay(100, undefined, { signal });
+    }
+    return { pid };
+  } catch (error) {
+    try { process.kill(pid); } catch {}
+    throw error;
+  }
+}
+
 export function createAppUpdater({ app, sendProgress, fetcher = githubFetch, helperPath }) {
   let candidate = null, controller = null, handingOff = false;
   async function supported() {
@@ -112,11 +141,10 @@ export function createAppUpdater({ app, sendProgress, fetcher = githubFetch, hel
       await writeFile(config, JSON.stringify({ target, stage, pid: process.pid, version: candidate.version, outcome: join(app.getPath('userData'), 'app-update-result.json') }));
       await runHelper(script, config, 'Prepare', signal);
       signal.throwIfAborted();
-      sendProgress({ text: 'Update verified. Restarting Tarkov Workbench…' });
+      sendProgress({ text: 'Starting the verified update helper…' });
+      await startUpdateHelper(script, config, stage, { signal });
       handingOff = true;
-      const helper = spawn('powershell.exe', ['-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-File', script, '-Config', config, '-Mode', 'Apply'], { detached: true, windowsHide: true, stdio: 'ignore' });
-      await new Promise((resolveResult, reject) => { helper.once('spawn', resolveResult); helper.once('error', reject); });
-      helper.unref();
+      sendProgress({ text: 'Update verified. Restarting Tarkov Workbench…' });
       setTimeout(() => app.quit(), 300);
       return { restarting: true };
     } catch (error) {
