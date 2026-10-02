@@ -19,7 +19,7 @@ import {isOptic,reachableOptics,zoomLabel} from './optics.mjs';
 import {findAlternatives,applyAlternative,alternativeWeightLabel} from './alternatives.mjs';
 import {arenaUnlock,isAvailable,availabilityLabel,AVAILABILITY_REVIEWED} from './availability.mjs';
 const $=id=>document.getElementById(id);
-const state={catalog:null,weapons:[],worker:null,result:null,mode:'balanced',sound:'silenced',scopeId:null,magazineId:null,traderSettings:defaultTraderSettings(),optics:[],running:false,run:0,precomputed:{},cancelCurrent:null,picker:null,bundled:null,snapshot:null,imageURLs:new Map(),updating:false,precomputedLoaded:false};
+const state={catalog:null,weapons:[],selectedWeaponId:null,worker:null,result:null,mode:'balanced',sound:'silenced',scopeId:null,magazineId:null,traderSettings:defaultTraderSettings(),optics:[],running:false,run:0,precomputed:{},cancelCurrent:null,picker:null,bundled:null,snapshot:null,imageURLs:new Map(),updating:false,precomputedLoaded:false};
 const number=(n,digits=1)=>Number(n).toLocaleString('en-GB',{maximumFractionDigits:digits});
 const signed=(n,digits=1)=>`${n>0?'+':''}${number(n,digits)}`;
 const date=value=>new Date(value).toLocaleString('en-GB',{dateStyle:'medium',timeStyle:'short'});
@@ -102,6 +102,14 @@ function invalidate(){
   notice($('weapon').value?'Selection ready. Select “Calculate build” when you are ready.':'Choose a weapon and objective, then calculate your build.');
 }
 function weaponChanged(){
+  const weaponId=$('weapon').value||null;
+  if(weaponId!==state.selectedWeaponId){
+    state.selectedWeaponId=weaponId;state.scopeId=null;state.magazineId=null;
+    for(const kind of ['scope','magazine']){
+      if($(`${kind}-dialog`).open)$(`${kind}-dialog`).close();
+      $(`${kind}-search`).value='';$(`${kind}-filter`).value=kind==='scope'?'all':'0';
+    }
+  }
   invalidate();const item=state.catalog.items[$('weapon').value];
   $('welcome-banner').hidden=Boolean(item);$('weapon-card').hidden=!item;
   $('calculate').disabled=!item||state.updating;$('scope-change').disabled=!item||state.updating;$('magazine-change').disabled=!item||state.updating;
@@ -302,7 +310,8 @@ function webMCP(){
     if(!input||typeof input!=='object'||Object.keys(input).some(k=>!['weaponId','mode','sound','balance','magazine','scopeId','magazineId','maxBudget','allowGrenadeLaunchers','excludeArenaUnlocks','preferPracticalMounts'].includes(k))||!moddableWeapons(state.catalog).some(item=>item.id===input.weaponId)||!['ergo','recoil','balanced'].includes(input.mode)||!['silenced','unsilenced'].includes(input.sound)||!(input.balance===undefined||(Number.isFinite(input.balance)&&input.balance>=0&&input.balance<=100))||!(input.magazine===undefined||MAGAZINE_MINIMUMS.includes(input.magazine))||!(input.maxBudget===undefined||input.maxBudget===null||(Number.isSafeInteger(input.maxBudget)&&input.maxBudget>=1&&input.maxBudget<=100000000)))throw new Error('Invalid build selection');
     if(input.excludeArenaUnlocks!==undefined&&typeof input.excludeArenaUnlocks!=='boolean')throw new Error('Invalid availability filter');
     if(input.preferPracticalMounts!==undefined&&typeof input.preferPracticalMounts!=='boolean')throw new Error('Invalid mounting preference');
-    input={...input,scopeId:input.scopeId===undefined?state.scopeId:input.scopeId,magazineId:input.magazineId===undefined?state.magazineId:input.magazineId};
+    const sameWeapon=input.weaponId===$('weapon').value;
+    input={...input,scopeId:input.scopeId===undefined?(sameWeapon?state.scopeId:null):input.scopeId,magazineId:input.magazineId===undefined?(sameWeapon?state.magazineId:null):input.magazineId};
     const availability={...state.traderSettings,weaponId:input.weaponId,allowGrenadeLaunchers:input.allowGrenadeLaunchers??$('allow-launchers').checked,excludeArenaUnlocks:input.excludeArenaUnlocks??$('exclude-arena').checked};
     if(typeof availability.allowGrenadeLaunchers!=='boolean')throw new Error('Invalid launcher preference');
     if(input.magazineId&&!reachableMagazines(state.catalog,input.weaponId,availability).some(item=>item.id===input.magazineId))throw new Error('Magazine excluded or incompatible');

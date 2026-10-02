@@ -8,17 +8,19 @@ import { join } from 'node:path';
 import { APP_VERSION, REPOSITORY, ZIP_NAME, HASH_NAME, compareVersions, inspectRelease, checkForUpdate, checksumValue } from '../dist/app-update.mjs';
 import { downloadVerified, validateInstallPath, createAppUpdater, githubFetch } from '../desktop/app-updater.mjs';
 
-function release(tag = 'v1.9.0.4') {
+const nextVersion=APP_VERSION.split('.').map((part,index)=>index===3?Number(part)+1:part).join('.');
+function release(tag = `v${nextVersion}`) {
   return { tag_name: tag, assets: [ZIP_NAME, HASH_NAME].map(name => ({ name, state: 'uploaded', size: name === ZIP_NAME ? 64 : 104, browser_download_url: `https://github.com/${REPOSITORY}/releases/download/${tag}/${name}` })) };
 }
-test('numeric versions handle fourth components, padding and larger minor versions', () => {
-  assert.equal(APP_VERSION, '1.9.0.3');
+test('numeric versions handle fourth components, padding and larger minor versions', async () => {
+  const pkg=JSON.parse(await readFile(new URL('../package.json',import.meta.url),'utf8'));
+  assert.equal(APP_VERSION,pkg.build.buildVersion);
   for (const [a, b, expected] of [['1.9.0.10', '1.9.0.3', 1], ['v1.9.0.3', '1.9.0.3', 0], ['1.9.0', '1.9.0.0', 0], ['1.10.0', '1.9.0.99', 1], ['1.9.0.2', '1.9.0.3', -1]]) assert.equal(compareVersions(a, b), expected);
   for (const value of ['1.9', '1.9.0-beta', '', '1.9.0.3.4', '9007199254740992.1.0']) assert.throws(() => compareVersions(value, APP_VERSION));
 });
 test('only a strictly newer stable release offers an update; equal and older never downgrade', () => {
   assert.equal(inspectRelease(release()).status, 'available');
-  for (const tag of ['v1.9.0.3', 'v1.9.0.2', 'v1.8.5']) assert.equal(inspectRelease({ tag_name: tag }).status, 'current');
+  for (const tag of [`v${APP_VERSION}`, 'v1.9.0.2', 'v1.8.5']) assert.equal(inspectRelease({ tag_name: tag }).status, 'current');
   for (const flags of [{ draft: true }, { prerelease: true }]) assert.throws(() => inspectRelease({ ...release(), ...flags }));
 });
 test('release assets require expected names, safe sizes, checksum and exact repository URLs', () => {
@@ -31,7 +33,7 @@ test('no published release is current; network and rate-limit failures are not n
   for (const status of [403, 429, 500]) await assert.rejects(checkForUpdate({ fetcher: async () => new Response('', { status }) }));
   await assert.rejects(checkForUpdate({ fetcher: async () => { throw new Error('offline'); } }), /offline/);
   await assert.rejects(checkForUpdate({ fetcher: async () => new Response('not json') }));
-  assert.equal((await checkForUpdate({ fetcher: async () => Response.json(release()) })).version, '1.9.0.4');
+  assert.equal((await checkForUpdate({ fetcher: async () => Response.json(release()) })).version, nextVersion);
 });
 test('checksum must name the exact portable file', () => {
   assert.equal(checksumValue(`${'A'.repeat(64)}  ${ZIP_NAME}\r\n`), 'a'.repeat(64));

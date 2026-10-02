@@ -1,4 +1,4 @@
-TARKOV WORKBENCH 1.9.0.3 - ONLINE SETUP EDITION
+TARKOV WORKBENCH 1.9.0.4 - ONLINE SETUP EDITION
 Author: CA
 
 Keep this whole folder together. Start Tarkov-Workbench.exe in this folder.
@@ -31,7 +31,7 @@ Escape from Tarkov and its item images belong to Battlestate Games or
 their respective rights holders. Independent community tool, not operated
 by Battlestate Games. Electron and Chromium licenses are in this folder.
 
-Version 1.9.0.3 checks complete suppressor assemblies and explains unavailable
+Version 1.9.0.4 checks complete suppressor assemblies and explains unavailable
 variants in a popup. Invalid budgets also show a popup. Scope and magazine
 lists refresh when the budget changes. Equivalent leaf choices are reduced
 before optimization without changing performance or compatibility priorities.
