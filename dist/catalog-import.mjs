@@ -2,6 +2,7 @@
 import {isOptic,classifyOpticMounts} from './optics.mjs';
 import {validateSource,validateCatalog} from './data-validation.mjs';
 import {importBarters,BARTERS_URL} from './barters.mjs';
+import {importFleaData} from './flea-market.mjs';
 export const DATA_URL='https://json.tarkov.dev/regular/items';
 export const NAMES_URL=DATA_URL+'_en';
 const base=DATA_URL;
@@ -27,6 +28,7 @@ for (const item of Object.values(source.items)) {
     vertical: p.recoilVertical, horizontal: p.recoilHorizontal, weight: item.weight,
     caliber: gun ? translate(p.caliber) : undefined, capacity: p.capacity,
     zoomLevels: p.zoomLevels,
+    flea: importFleaData(item),
     offers: item.buyFromTrader.map(o=>({trader:o.trader,price:o.price,priceRUB:o.priceRUB,currency:o.currency,minTraderLevel:o.minTraderLevel,taskUnlock:o.taskUnlock??null})),
     statExtras: { accuracy:p.accuracyModifier??item.accuracyModifier??0, velocity:item.velocity??0, loudness:item.loudness??0, durabilityBurn:p.durabilityBurnFactor??1 },
     suppressor: overrides.items[item.id]?.suppressor ?? item.types.includes('suppressor'),
@@ -59,7 +61,7 @@ for(const weapon of Object.values(items).filter(item=>item.types.includes('gun')
   }
   weapon.factoryParts=parts;
 }
-const digest=await crypto.subtle.digest('SHA-256',new TextEncoder().encode('catalog-v7-factory-parts'+JSON.stringify(overrides)+raw.text+names.text+barters.text));
+const digest=await crypto.subtle.digest('SHA-256',new TextEncoder().encode('catalog-v8-flea-market'+JSON.stringify(overrides)+raw.text+names.text+barters.text));
 const version=Array.from(new Uint8Array(digest),b=>b.toString(16).padStart(2,'0')).join('').slice(0,16);
 const data = { meta: { schemaVersion:1, version, fetchedAt: raw.fetchedAt, sourceModified: raw.modified, source: base, localeSource: `${base}_en`, gameMode: 'regular', weaponCount: Object.values(items).filter(i => i.types.includes('gun')).length, modCount: Object.values(items).filter(i => !i.types.includes('gun')).length }, items };
 validateCatalog(data);

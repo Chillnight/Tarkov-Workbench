@@ -41,8 +41,10 @@ test('6L18 is an available Prapor level 1 barter by default and can be disabled'
   assert.equal(o.includeBarters,true);assert.equal(normalizeTraderSettings({}).includeBarters,true);
   assert.equal(isAvailable(mag,o),true);assert.equal(cheapestOffer(mag,o).kind,'barter');
   assert.match(offerLabel(mag,o),/Prapor LL1.*Barter:/);assert.match(offerLabel(mag,o),/1 ×/);
-  assert.equal(isAvailable(mag,{...o,includeBarters:false}),false);
-  assert.equal(isAvailable(mag,{...o,traderLevels:{...o.traderLevels,'54cb50c76803fa8b248b4571':0}}),false);
+  assert.equal(isAvailable(mag,{...o,includeBarters:false}),true);
+  assert.equal(cheapestOffer(mag,{...o,includeBarters:false}).kind,'flea');
+  assert.equal(isAvailable(mag,{...o,includeBarters:false,includeFleaMarket:false}),false);
+  assert.equal(isAvailable(mag,{...o,includeFleaMarket:false,traderLevels:{...o.traderLevels,'54cb50c76803fa8b248b4571':0}}),false);
 });
 test('Unknown barter values remain eligible and never become a free price',()=>{
   const barter={id:'trade',kind:'barter',trader:'p',minTraderLevel:1,taskUnlock:'quest',priceRUB:null,rewardCount:1,requiredItems:[{id:'i',name:'Ingredient',count:2,attributes:{}}]};

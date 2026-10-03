@@ -74,3 +74,7 @@ The same item export now supplies saved cash purchase offers, levels, quest lock
 ## Barter offers (v1.8)
 
 Confirmed database updates also download /regular/barters. The new snapshot is activated only when item data, names, barters and required images validate. Older snapshots without barter fields fall back to the bundled snapshot with a notice. User-selected optics and magazines remain pinned after settings changes.
+
+## Flea Market availability (v1.9.0.6)
+
+The existing item export supplies Flea Market eligibility, item unlock levels and saved 24-hour average prices. **Include Flea Market items** in Settings is enabled by default and assumes the player's market access and item unlock level. No live listings are queried. Trader, barter and factory-part routes remain available; known Arena exclusions still apply. Older snapshots without market fields remain usable, with a notice to run **Update database** once. A confirmed update imports the fields even if the source item data has otherwise stayed the same.

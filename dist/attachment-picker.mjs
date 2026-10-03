@@ -2,7 +2,7 @@
 import {matchesOpticFilter,zoomLabel} from './optics.mjs';
 import {offerLabel} from './traders.mjs';
 export function attachmentCacheKey(catalog,options,kind){
-  return JSON.stringify({version:catalog.meta.version,kind,weaponId:options.weaponId,sound:options.sound,scopeId:kind==='scope'?null:options.scopeId,magazineId:kind==='magazine'?null:options.magazineId,magazine:kind==='magazine'?1:options.magazine,maxBudget:options.maxBudget??null,excludeArenaUnlocks:options.excludeArenaUnlocks,allowGrenadeLaunchers:options.allowGrenadeLaunchers,restrictTraders:options.restrictTraders,traderLevels:options.traderLevels,includeQuestOffers:options.includeQuestOffers,includeBarters:options.includeBarters});
+  return JSON.stringify({version:catalog.meta.version,kind,weaponId:options.weaponId,sound:options.sound,scopeId:kind==='scope'?null:options.scopeId,magazineId:kind==='magazine'?null:options.magazineId,magazine:kind==='magazine'?1:options.magazine,maxBudget:options.maxBudget??null,excludeArenaUnlocks:options.excludeArenaUnlocks,allowGrenadeLaunchers:options.allowGrenadeLaunchers,restrictTraders:options.restrictTraders,traderLevels:options.traderLevels,includeQuestOffers:options.includeQuestOffers,includeBarters:options.includeBarters,includeFleaMarket:options.includeFleaMarket===true});
 }
 export function setupAttachmentPickers({getCatalog,getOptions,imageURL,onSelect,validate=()=>true}){
   const $=id=>document.getElementById(id),cache=new Map();

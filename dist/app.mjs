@@ -11,6 +11,7 @@ import {setupSettings} from './settings-ui.mjs';
 import {defaultTraderSettings,normalizeTraderSettings,offerLabel,buildCost,TRADERS} from './traders.mjs';
 import {ENGINE_VERSION} from './optimizer.mjs';
 import {createShoppingList,formatShoppingList} from './shopping-list.mjs';
+import {hasFleaData,fleaOfferLabel} from './flea-market.mjs';
 import {applyTheme} from './themes.mjs';
 import {setupVariantSelection} from './variant-ui.mjs';
 import {setupFeedback} from './feedback.mjs';
@@ -92,7 +93,8 @@ function renderSuppressorSelection(){
 }
 function traderSummary(){
   const settings=state.traderSettings;
-  $('trader-summary').textContent=settings.restrictTraders?`Trader offers only · ${TRADERS.map(t=>`${t.name} ${settings.traderLevels[t.id]}`).join(' / ')} · Quest offers ${settings.includeQuestOffers?'included':'excluded'} · Barters ${settings.includeBarters?'included':'excluded'}`:'Unrestricted attachments · Vendor prices shown where available';
+  $('trader-summary').textContent=settings.restrictTraders?`Trader levels applied · ${TRADERS.map(t=>`${t.name} ${settings.traderLevels[t.id]}`).join(' / ')} · Quest offers ${settings.includeQuestOffers?'included':'excluded'} · Barters ${settings.includeBarters?'included':'excluded'} · Flea Market ${settings.includeFleaMarket?'included':'excluded'}`:'Unrestricted attachments · Purchase prices shown where available';
+  if(settings.includeFleaMarket&&state.catalog&&!hasFleaData(state.catalog))$('trader-summary').textContent+=' · Update database to load Flea Market data';
 }
 function invalidate(){
   if(state.running)cancel();
@@ -133,21 +135,22 @@ function safeLink(url,label){const a=element('a',null,label);try{const u=new URL
 function renderShoppingList(selection,rows){
   const list=createShoppingList(state.catalog,selection,rows),details=element('details','shopping-list');
   const count=rows.length;
-  details.append(element('summary',null,`Trader shopping list · ${count} part${count===1?'':'s'} · ${list.groups.length} vendor group${list.groups.length===1?'':'s'}`));
+  details.append(element('summary',null,`Shopping list · ${count} part${count===1?'':'s'} · ${list.groups.length} purchase group${list.groups.length===1?'':'s'}`));
   const copy=element('button','subtle','Copy shopping list');copy.type='button';
   copy.addEventListener('click',async()=>{
     try{await navigator.clipboard.writeText(formatShoppingList(list));copy.textContent='Copied';setTimeout(()=>copy.textContent='Copy shopping list',2000);}
     catch{notice('Clipboard access was blocked. Select and copy the shopping list manually.',true);}
   });
-  details.append(copy,element('p','hint','Attachments only · weapon excluded. Best eligible saved trader offer per part; live stock is not checked. Barter RUB values are estimates.'));
+  details.append(copy,element('p','hint','Attachments only · weapon excluded. Best eligible saved purchase offer per part; live stock is not checked. Barter and Flea Market prices are estimates.'));
   for(const group of list.groups){
-    details.append(element('h3',null,`${group.traderName} · ${group.kind==='barter'?'Barter':'Cash'}`));
+    details.append(element('h3',null,`${group.traderName} · ${group.kind==='barter'?'Barter':group.kind==='flea'?'Estimated prices':'Cash'}`));
     const items=element('ul');
     for(const {item,offer,quantity} of group.items){
       const entry=element('li');
       entry.append(element('b',null,`${quantity} × ${item.shortName} – ${item.name}`));
       const level=`LL${offer.minTraderLevel}${offer.taskUnlock?' · quest unlock assumed':''}`;
-      if(group.kind==='barter'){
+      if(group.kind==='flea')entry.append(element('span',null,fleaOfferLabel(offer)));
+      else if(group.kind==='barter'){
         const trades=Math.ceil(quantity/(offer.rewardCount||1));
         const recipe=(offer.requiredItems??[]).map(required=>`${required.count*trades} × ${required.name}${Object.keys(required.attributes??{}).length?' ('+Object.entries(required.attributes).map(([key,value])=>`${key}: ${value}`).join(', ')+')':''}`).join(' + ');
         entry.append(element('span',null,`${level} · ${trades} trade${trades===1?'':'s'} · ${recipe||'ingredients unknown'}${Number.isFinite(offer.priceRUB)&&offer.priceRUB>0?` · estimated ${number(offer.priceRUB*quantity,0)} RUB`:''}`));
@@ -187,7 +190,7 @@ function render(result,selection){
   if(selection.maxBudget!=null)$('build-caption').textContent+=` · max ${number(selection.maxBudget,0)} RUB attachments`;
   if(result.magazineCapacity)$('build-caption').textContent+=` · ${result.magazineCapacity}-round magazine${!selection.magazineId&&selection.magazine>1?` (target ${selection.magazine})`:''}`;
   const cost=buildCost(state.catalog,selection,result.rows);
-  $('parts').append(element('p','cost-summary',`Attachment cost${cost.barterCount?' estimate':''}: ${number(cost.priceRUB,0)} RUB${cost.unpriced?` + ${cost.unpriced} parts without a known value`:''} · weapon excluded · saved offers${cost.factoryCount?` · ${cost.factoryCount} factory part(s) included with weapon`:''}${cost.barterCount?` · ${cost.barterCount} barter item(s), ingredient values estimated`:``}`));
+  $('parts').append(element('p','cost-summary',`Attachment cost${cost.barterCount||cost.fleaCount?' estimate':''}: ${number(cost.priceRUB,0)} RUB${cost.unpriced?` + ${cost.unpriced} parts without a known value`:''} · weapon excluded · saved offers${cost.factoryCount?` · ${cost.factoryCount} factory part(s) included with weapon`:''}${cost.barterCount?` · ${cost.barterCount} barter item(s), ingredient values estimated`:``}${cost.fleaCount?` · ${cost.fleaCount} Flea Market item(s), 24h average prices`:''}`));
   $('parts').append(renderShoppingList(selection,result.rows));
   $('parts').append(element('p','mounting-summary',mountingSummary(result)));
   if(!selection.magazineId&&selection.magazine>1&&result.magazineCapacity&&result.magazineCapacity<selection.magazine)$('parts').append(element('p','hint',`Magazine target: ${selection.magazine} rounds. The best compatible capacity is ${result.magazineCapacity} rounds, so the build uses that magazine.`));
@@ -339,6 +342,7 @@ async function activateDatabase(snapshot){
   else state.picker=createWeaponPicker({root:$('weapon-picker'),items:state.weapons,hiddenCount:state.catalog.meta.weaponCount-state.weapons.length,onSelect:weaponChanged,imageURL});
   if(!selected)state.picker.select(null);
   refreshAvailability();
+  traderSummary();
   const meta=state.catalog.meta;
   $('data-status').textContent=`${state.weapons.length} selectable weapons / ${meta.modCount} attachments · saved locally\nRetrieved: ${date(meta.fetchedAt)}`;
   $('source-detail').textContent=`Source: ${meta.source} · Export updated: ${meta.sourceModified?date(meta.sourceModified):'Not supplied'} · Snapshot ${meta.version}. Stats and images are stored locally. Barter offers retrieved: ${meta.barterFetchedAt?date(meta.barterFetchedAt):'not available'}. Update database downloads a new snapshot only after your confirmation.`;

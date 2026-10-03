@@ -35,7 +35,7 @@ test('Factory parts remain available without offers; ordinary unavailable upgrad
     const result=optimize(c,{...options,mode},solver);
     assert.equal(result.status,'optimal');
     assert.equal(result.rows[0].itemId,'original');
-    assert.deepEqual(result.cost,{priceRUB:0,unpriced:0,barterCount:0,factoryCount:1});
+    assert.deepEqual(result.cost,{priceRUB:0,unpriced:0,barterCount:0,factoryCount:1,fleaCount:0});
   }
   assert.match(offerLabel(c.items.original,options,c),/Factory part.*included/);
 });
@@ -58,7 +58,7 @@ test('Factory ownership is per weapon and limited to preset quantities, includin
   c.items.original.offers=[offer(100)];
   const result=optimize(c,{...options,maxBudget:100},solver);
   assert.equal(result.status,'optimal');
-  assert.deepEqual(result.cost,{priceRUB:100,unpriced:0,barterCount:0,factoryCount:1});
+  assert.deepEqual(result.cost,{priceRUB:100,unpriced:0,barterCount:0,factoryCount:1,fleaCount:0});
   assert.deepEqual(validateBuild(c,options,result.rows),[]);
   assert.equal(optimize(c,{...options,maxBudget:99},solver).status,'infeasible');
   const list=createShoppingList(c,options,result.rows);

@@ -1,9 +1,9 @@
-TARKOV WORKBENCH 1.9.0.5
+TARKOV WORKBENCH 1.9.0.6
 Author: CA
 
 Extract the entire ZIP to a new folder. Double-click Tarkov-Workbench.exe.
 Keep all extracted files and folders together; they are required.
-Close any older running instance first. The GUI header shows v1.9.0.5.
+Close any older running instance first. The GUI header shows v1.9.0.6.
 
 Windows 10/11 x64. No installation, browser, Node.js or account required.
 The root EXE starts the bundled Electron runtime directly. The application,
@@ -63,14 +63,18 @@ Choose pictured scopes and magazines with complete compatibility checks.
 Underbarrel launchers are excluded by default; opt in on the main screen.
 Vendor prices break ties between equivalent builds.
 Barters are included by default, with recipes and estimated ingredient values.
-Disable barter offers in Settings if desired. Flea purchases and weapon bundles are not modeled.
+Disable barter offers in Settings if desired. Flea Market items are enabled by default;
+prices use saved 24-hour averages and access/item unlock levels are assumed.
+Use Update database once if your saved catalog has no market data yet.
+Disable Include Flea Market items for trader and factory parts only.
+Live listings and other weapon bundles are not modeled.
 See TRADERS-AND-LOADOUT.md for details.
 
 Selected scopes remain mandatory in every mode.
 Trader levels use clickable 1-4 boxes.
 Practical mounting prioritizes reviewed low-profile routes within four Ergo.
 
-Version 1.9.0.5 checks complete suppressor assemblies and explains unavailable
+Version 1.9.0.6 checks complete suppressor assemblies and explains unavailable
 variants in a popup. Invalid budgets also show a popup. Scope and magazine
 lists refresh when the budget changes. Equivalent leaf choices are reduced
 before optimization without changing performance or compatibility priorities.

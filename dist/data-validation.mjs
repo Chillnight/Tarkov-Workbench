@@ -18,6 +18,7 @@ export function validateSource(source,locale){
     if(typeof (locale[item.name]??item.name)!=='string'||typeof (locale[item.shortName]??item.shortName)!=='string')fail('missing English names');
     if(!validateImageSource(item.iconLink))fail('unsupported item image source');
     if(!validOffers(item.buyFromTrader))fail('invalid or missing trader purchase offers');
+    if(!Number.isInteger(item.minLevelForFlea)||item.minLevelForFlea<0||item.minLevelForFlea>200||!(item.avg24hPrice==null||(Number.isFinite(item.avg24hPrice)&&item.avg24hPrice>=0)))fail('invalid Flea Market data');
     for(const slot of item.properties?.slots??[]){
       if(!idPattern.test(slot.id)||typeof slot.nameId!=='string')fail('invalid attachment slot');
       for(const value of Object.values(slot.filters??{}))if(!ids(value))fail('invalid attachment filter');
@@ -37,6 +38,7 @@ export function validateCatalog(catalog,previous){
     if(!idPattern.test(id)||id!==item.id||typeof item.name!=='string'||!item.name||typeof item.shortName!=='string')fail('invalid item');
     if(![item.ergo,item.recoil,item.weight].every(Number.isFinite)||item.weight<0)fail(`missing stats for ${item.shortName}`);
     if(!validOffers(item.offers))fail('missing trader offers; update the database with this app version');
+    if(item.flea!==undefined&&(!item.flea||typeof item.flea.allowed!=='boolean'||!Number.isInteger(item.flea.minLevel)||item.flea.minLevel<0||item.flea.minLevel>200||!(item.flea.priceRUB===null||(Number.isSafeInteger(item.flea.priceRUB)&&item.flea.priceRUB>0))||(item.types.includes('noFlea')&&item.flea.allowed)))fail('invalid Flea Market data');
     if(item.factoryParts!==undefined&&(item.factoryParts===null||typeof item.factoryParts!=='object'||Array.isArray(item.factoryParts)||Object.keys(item.factoryParts).length>100||Object.entries(item.factoryParts).some(([part,count])=>!catalog.items[part]?.types.includes('mods')||!Number.isInteger(count)||count<1||count>32)))fail('invalid included factory parts');
     if(!Array.isArray(item.barters)||item.barters.some(o=>!/^[a-zA-Z0-9_-]{1,80}$/.test(o.id)||o.kind!=='barter'||!idPattern.test(o.trader)||!Number.isInteger(o.minTraderLevel)||o.minTraderLevel<1||o.minTraderLevel>4||(o.taskUnlock!=null&&!idPattern.test(o.taskUnlock))||!(o.rewardCount>0)||!Number.isFinite(o.rewardCount)||(o.priceRUB!==null&&(!Number.isFinite(o.priceRUB)||o.priceRUB<=0))||!Array.isArray(o.requiredItems)||!o.requiredItems.length||o.requiredItems.some(i=>typeof i.id!=='string'||typeof i.name!=='string'||!i.name||!Number.isFinite(i.count)||i.count<=0)))fail('missing or invalid barter offers; update the database with this app version');
     if(!ids(item.categories)||!ids(item.conflicts)||!ids(item.conflictCategories)||!ids(item.blockedSlots))fail('invalid compatibility restrictions');

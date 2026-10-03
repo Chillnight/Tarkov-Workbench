@@ -30,6 +30,7 @@ export function setupSettings({settings,theme='original',onSave,firstRun}){
     $('restrict-traders').checked=settings.restrictTraders;
     $('include-quest-offers').checked=settings.includeQuestOffers;
     $('include-barters').checked=settings.includeBarters;
+    $('include-flea-market').checked=settings.includeFleaMarket;
     for(const trader of TRADERS)setLevel(trader.id,settings.traderLevels[trader.id]);
     $('settings-error').textContent='';dialog.showModal();
   }
@@ -37,7 +38,7 @@ export function setupSettings({settings,theme='original',onSave,firstRun}){
   $('settings-cancel').addEventListener('click',()=>dialog.close());
   dialog.addEventListener('close',()=>selectTheme(theme));
   $('settings-save').addEventListener('click',async()=>{
-    const next=normalizeTraderSettings({restrictTraders:$('restrict-traders').checked,includeQuestOffers:$('include-quest-offers').checked,includeBarters:$('include-barters').checked,
+    const next=normalizeTraderSettings({restrictTraders:$('restrict-traders').checked,includeQuestOffers:$('include-quest-offers').checked,includeBarters:$('include-barters').checked,includeFleaMarket:$('include-flea-market').checked,
       traderLevels:Object.fromEntries(TRADERS.map(t=>[t.id,Number($(`trader-${t.id}`).value)]))});
     $('settings-save').disabled=true;
     try{
