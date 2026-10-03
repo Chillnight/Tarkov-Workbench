@@ -12,6 +12,7 @@ import {defaultTraderSettings,normalizeTraderSettings,offerLabel,buildCost,TRADE
 import {ENGINE_VERSION} from './optimizer.mjs';
 import {createShoppingList,formatShoppingList} from './shopping-list.mjs';
 import {hasFleaData,fleaOfferLabel} from './flea-market.mjs';
+import {hasThermalData,thermalLabel} from './thermal-stats.mjs';
 import {applyTheme} from './themes.mjs';
 import {setupVariantSelection} from './variant-ui.mjs';
 import {setupFeedback} from './feedback.mjs';
@@ -95,6 +96,7 @@ function traderSummary(){
   const settings=state.traderSettings;
   $('trader-summary').textContent=settings.restrictTraders?`Trader levels applied · ${TRADERS.map(t=>`${t.name} ${settings.traderLevels[t.id]}`).join(' / ')} · Quest offers ${settings.includeQuestOffers?'included':'excluded'} · Barters ${settings.includeBarters?'included':'excluded'} · Flea Market ${settings.includeFleaMarket?'included':'excluded'}`:'Unrestricted attachments · Purchase prices shown where available';
   if(settings.includeFleaMarket&&state.catalog&&!hasFleaData(state.catalog))$('trader-summary').textContent+=' · Update database to load Flea Market data';
+  if(state.catalog&&!hasThermalData(state.catalog))$('trader-summary').textContent+=' · Update database to load heat and cooling data';
 }
 function invalidate(){
   if(state.running)cancel();
@@ -198,6 +200,7 @@ function render(result,selection){
   if(!result.rows.length)$('parts').append(element('div','empty','This build does not need any additional attachments.'));
   const items=state.catalog.items;
   const alternatives=findAlternatives(state.catalog,selection,result.rows);
+  if(result.thermalPreference?.applied&&!result.manualAlternative)$('parts').append(element('p','hint','Handguard heat and cooling improved without changing Ergo, recoil or installed attachments. Weight and cost reflect the chosen parts.'));
   const displayedCounts=new Map();
   for(const [rowIndex,row] of result.rows.entries()){
     const occurrence=(displayedCounts.get(row.itemId)??0)+1;displayedCounts.set(row.itemId,occurrence);
@@ -210,16 +213,17 @@ function render(result,selection){
     if(item.id===selection.scopeId){article.classList.add('selected-scope-part');content.append(element('span','scope-badge','Your selected scope'));}
     if(alternatives[rowIndex].length){
       const details=element('details','alternatives');
-      details.append(element('summary',null,`${alternatives[rowIndex].length} compatible alternative${alternatives[rowIndex].length===1?'':'s'}`),element('p','alternative-note','Same Ergo, recoil and other recorded performance stats. Weight and price may differ. Each swap preserves all installed parts and is checked against this entire build. Current availability settings apply.'));
+      details.append(element('summary',null,`${alternatives[rowIndex].length} compatible alternative${alternatives[rowIndex].length===1?'':'s'}`),element('p','alternative-note',item.category==='Handguard'?'Same Ergo, recoil and other recorded performance stats; heat and cooling may differ. Lower heat and higher cooling are preferred only when neither worsens. Weight and price may differ. Every swap preserves installed parts and passes the complete compatibility and budget checks.':'Same Ergo, recoil and other recorded performance stats. Weight and price may differ. Each swap preserves all installed parts and is checked against this entire build. Current availability settings apply.'));
       for(const id of alternatives[rowIndex]){
         const alt=items[id],entry=element('div','alternative-item'),thumbnail=element('img');thumbnail.src=imageURL(alt.icon);thumbnail.alt='';thumbnail.loading='lazy';
         const name=element('span');name.append(element('b',null,alt.shortName),document.createTextNode(` – ${alt.name} · ${number(alt.weight??0,3)} kg · ${alternativeWeightLabel(item,alt)} · ${offerLabel(alt,selection,state.catalog,1+result.rows.filter(r=>r.itemId===alt.id).length)}`));
+        if(alt.category==='Handguard')name.append(document.createTextNode(` · ${thermalLabel(alt)}`));
         const use=element('button','subtle','Use');use.type='button';use.setAttribute('aria-label',`Use alternative ${alt.name}`);
         use.addEventListener('click',()=>{
           const swapped=applyAlternative(state.catalog,selection,result,rowIndex,id);
           if(!swapped){notice('This alternative no longer fits the current build. Recalculate to check it again.',true);return;}
           render(swapped,selection);
-          notice(`Using ${alt.shortName}. Performance stats preserved; weight and price updated. Complete assembly rechecked.`);
+          notice(`Using ${alt.shortName}. Ergo and recoil preserved; weight, price and displayed attachment stats updated. Complete assembly rechecked.`);
         });
         entry.append(thumbnail,name,use);details.append(entry);
       }
@@ -234,6 +238,7 @@ function render(result,selection){
     }
     const values=element('div','part-values');values.append(element('div',null,`${signed(item.ergo)} Ergo`),element('div',null,`${signed(item.recoil*100)} % Recoil`));
     if(item.capacity)values.append(element('div',null,`${item.capacity} rounds`));
+    if(item.category==='Handguard')values.append(element('div',null,thermalLabel(item)));
     article.append(img,content,values);$('parts').append(article);
   }
 }

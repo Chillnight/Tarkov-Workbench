@@ -1,5 +1,11 @@
-TARKOV WORKBENCH 1.9.0.6
+TARKOV WORKBENCH 1.9.0.7
 Author: CA
+
+Handguard heat and cooling are shown beside attachment stats. Compatible
+replacements with better known thermal values can win at equal Ergo/recoil,
+without worsening either value or replacing mounted children. Weight and
+price decide between incomparable improvements. Run Update database once
+after upgrading an older saved snapshot to load these fields.
 
 Extract the entire ZIP to a new folder. Double-click Tarkov-Workbench.exe.
 Keep all extracted files and folders together; they are required.

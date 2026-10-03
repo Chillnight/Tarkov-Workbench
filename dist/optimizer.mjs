@@ -6,7 +6,8 @@ import { cheapestOffer,buildCost } from './traders.mjs';
 import {mountProfile,isSpecialMount} from './mount-profiles.mjs';
 import {MAGAZINE_MINIMUMS} from './magazine-preferences.mjs';
 import {dominatedLeafNodes} from './equivalent-parts.mjs';
-export const ENGINE_VERSION = '1.9.0.6';
+import {preferThermalHandguards} from './thermal-handguards.mjs';
+export const ENGINE_VERSION = '1.9.0.7';
 const clamp = value => Math.min(100, Math.max(0, value));
 const rounded = value => Math.round(value * 1e8) / 1e8;
 function expression(terms) {
@@ -334,7 +335,7 @@ export function optimize(catalog, options, solver, progress=()=>{}) {
     }else latest=baseline;
   }
   const remaining=new Map(problem.edges.map(e=>[e.name,Math.round(latest.Columns[e.name]?.Primal??0)]));
-  const rows=[];
+  let rows=[];
   function assemble(node,parentIndex,path) {
     for(const slot of node.slots) {
       const edge=slot.edges.find(e=>remaining.get(e.name)>0);
@@ -347,6 +348,9 @@ export function optimize(catalog, options, solver, progress=()=>{}) {
   }
   assemble(problem.root,0,problem.root.item.shortName);
   if([...remaining.values()].some(v=>v!==0)) throw new Error('The result contains unattached parts.');
+  progress('Checking handguard heat and cooling without changing main stats …');
+  const thermalPreference=preferThermalHandguards(catalog,options,rows,validateBuild);
+  rows=thermalPreference.rows;
   const errors=validateBuild(catalog,options,rows);
   if(errors.length) throw new Error(`Compatibility validation failed: ${errors.join('; ')}`);
   const cost=buildCost(catalog,options,rows);
@@ -354,10 +358,10 @@ export function optimize(catalog, options, solver, progress=()=>{}) {
   const rawErgo=sum(latest,ergoTerms), recoil=sum(latest,recoilTerms), weapon=problem.root.item;
   if(practical.applied&&(baselineErgo-clamp(rawErgo)>4+1e-5||Math.abs(recoil-baselineRecoil)>1e-6))throw new Error('Practical mounting limits were not met.');
   if(floor>0&&clamp(rawErgo)<floor-1e-5) throw new Error('The ergonomics threshold was not met.');
-  const weight=nodes.reduce((s,n)=>s+(n.item.weight??0)*Math.round(latest.Columns[n.x]?.Primal??0),0);
+  const weight=[options.weaponId,...rows.map(row=>row.itemId)].reduce((sum,id)=>sum+(catalog.items[id].weight??0),0);
   const magazineSlotIds=new Set(problem.slots.filter(s=>s.key==='mod_magazine').map(s=>s.id));
   const magazineCapacity=rows.filter(row=>magazineSlotIds.has(row.slotId)).reduce((capacity,row)=>Math.max(capacity,problem.byId.get(row.itemId)?.item.capacity??0),0)||null;
   const balanceTarget=options.mode==='balanced'?options.balance:null;
   const balanceShortfall=balanceTarget===null?0:rounded(Math.max(0,balanceTarget-clamp(rawErgo)));
-  return {status:allOptimal&&problem.missing.length===0?'optimal':'feasible',rows,cost,ergo:clamp(rawErgo),rawErgo,recoil,vertical:Math.max(0,weapon.vertical*(1+recoil)),horizontal:Math.max(0,weapon.horizontal*(1+recoil)),weight,magazineCapacity,maxErgo,floor,balanceTarget,balanceShortfall,practical,seconds:(Date.now()-started)/1000,considered:nodes.length,conflictCount:problem.conflictCount,missing:problem.missing,engine:ENGINE_VERSION};
+  return {status:allOptimal&&problem.missing.length===0?'optimal':'feasible',rows,cost,ergo:clamp(rawErgo),rawErgo,recoil,vertical:Math.max(0,weapon.vertical*(1+recoil)),horizontal:Math.max(0,weapon.horizontal*(1+recoil)),weight,magazineCapacity,maxErgo,floor,balanceTarget,balanceShortfall,practical,thermalPreference:{applied:thermalPreference.applied,swaps:thermalPreference.swaps},seconds:(Date.now()-started)/1000,considered:nodes.length,conflictCount:problem.conflictCount,missing:problem.missing,engine:ENGINE_VERSION};
 }

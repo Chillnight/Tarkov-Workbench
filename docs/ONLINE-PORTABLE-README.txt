@@ -1,4 +1,4 @@
-TARKOV WORKBENCH 1.9.0.6 - ONLINE SETUP EDITION
+TARKOV WORKBENCH 1.9.0.7 - ONLINE SETUP EDITION
 Author: CA
 
 Keep this whole folder together. Start Tarkov-Workbench.exe in this folder.
@@ -41,6 +41,13 @@ before optimization without changing performance or compatibility priorities.
 Factory-preset parts remain available without standalone offers, and
 iron-sight routes are checked across the assembly.
 Factory parts are included with the selected weapon and need no extra purchase.
+
+HANDGUARD HEAT AND COOLING
+At equal Ergo/recoil, compatible handguard replacements may be preferred
+for lower heat and higher cooling without worsening either recorded value.
+Both values must be supplied. Installed attachments, availability rules
+and budgets are preserved. Tradeoffs remain visible as alternatives.
+Use Update database once after upgrading to load the new thermal fields.
 
 PROGRAM UPDATES
 Check for updates is separate from Update database. It checks GitHub only

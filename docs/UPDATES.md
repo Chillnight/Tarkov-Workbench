@@ -78,3 +78,7 @@ Confirmed database updates also download /regular/barters. The new snapshot is a
 ## Flea Market availability (v1.9.0.6)
 
 The existing item export supplies Flea Market eligibility, item unlock levels and saved 24-hour average prices. **Include Flea Market items** in Settings is enabled by default and assumes the player's market access and item unlock level. No live listings are queried. Trader, barter and factory-part routes remain available; known Arena exclusions still apply. Older snapshots without market fields remain usable, with a notice to run **Update database** once. A confirmed update imports the fields even if the source item data has otherwise stayed the same.
+
+## Handguard thermal data (v1.9.0.7)
+
+The same confirmed item download imports recorded heat and cooling factors. Old databases remain usable, but require **Update database** once to load these fields. The catalog hash changes for the importer revision, so unchanged source exports still refresh old snapshots. Engine 1.9.0.7 invalidates earlier calculation caches. No new data host or automatic download is introduced. Unknown factors are displayed as not supplied and never used to claim a thermal improvement. See TRADERS-AND-LOADOUT.md for selection rules and limitations.

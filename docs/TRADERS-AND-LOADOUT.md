@@ -52,6 +52,14 @@ Barter cards display the trader, required loyalty level, exchange items, quantit
 
 A barter's RUB value is an estimate per reward item: saved ingredient average prices, or recorded cash prices when an average is unavailable. It is not a cash purchase or a guarantee that the user can buy the ingredients. Attributes such as dogtag levels make the estimate unknown. Unknown values remain eligible but are never treated as free; totals explicitly distinguish estimated barter content and unpriced parts.
 
+## Handguard heat and cooling (1.9.0.7)
+
+The item importer saves the source `heatFactor` and `coolingFactor`. Lower heat and higher cooling are preferred. Missing values remain unknown rather than being assumed neutral. Run **Update database** once after upgrading an older snapshot; existing catalogs remain usable and show a notice when the fields are absent.
+
+After optimizing the main build and its practical mounts, the builder checks compatible replacements for each installed handguard. A replacement must retain Ergo, recoil and every other recorded performance value, preserve all installed children, and pass the complete compatibility, availability and budget checks. Only replacements that improve at least one known thermal value without worsening the other can be preferred automatically. Both values must be supplied for both parts. Parts are not added solely to improve cooling. This checks handguard replacements in the current assembly; it is not a simulation of whole-weapon temperature or a search for different attachment chains.
+
+When several incomparable improvements remain, lower weight and then purchase cost break the tie. Heat/cooling tradeoffs remain visible as compatible alternatives, with the actual modifiers beside their names. Manual selection can choose a different thermal tradeoff; Ergo and recoil remain fixed. Displayed percentages are individual item modifiers, not predicted build temperature or cooling time. Parts with different thermal or other recorded performance fields are no longer discarded as identical during leaf reduction.
+
 ## Scope priority and mount profile
 
 A selected scope is a hard constraint in every objective, including maximum Ergo. An infeasible selection never falls back to iron sights. Practical mounting retains the selected scope and main weapon parts, with the same recoil and at most 4 displayed Ergo points lost. It first minimizes reviewed high-profile mounts/risers, then reviewed specialized housings, then non-low sight mounts, then total sight mounts; it then optimizes Ergo, weight, part count and price. This can choose a lower route even with the same or a larger mount count.
