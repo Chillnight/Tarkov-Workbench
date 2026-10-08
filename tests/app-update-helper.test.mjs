@@ -1,8 +1,8 @@
 // Author: CA
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { execFileSync } from 'node:child_process';
-import { mkdtemp, mkdir, writeFile, readFile, rm, access } from 'node:fs/promises';
+import { execFileSync, spawn } from 'node:child_process';
+import { mkdtemp, mkdir, writeFile, readFile, rm, access, readdir } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
@@ -102,4 +102,57 @@ Set-Content -LiteralPath (Join-Path (Split-Path -Parent $Config) 'helper-process
     await writeFile(script, fakeLaunch('Start-Sleep -Seconds 30'));
     await assert.rejects(startUpdateHelper(script, config, root, { timeoutMs: 1500 }), /did not start in time/);
   } finally { await rm(root, { recursive: true, force: true, maxRetries: 5, retryDelay: 200 }); }
+});
+
+test('Windows helper handles brackets, non-ASCII paths and locked files without leaving a partial app', { skip: process.platform !== 'win32' }, async () => {
+  for (const [scenario, folder] of [['brackets', 'Tarkov Workbench [test]'], ['non-ascii', 'Jürgen Ördner ß'], ['transient-lock', 'Portable app'], ['locked', 'Portable app']]) {
+    const root = await mkdtemp(join(tmpdir(), 'workbench helper paths-'));
+    const target = join(root, folder), stage = join(root, '.workbench-update-test'), config = join(stage, 'update.json');
+    let lock = null;
+    try {
+      await mkdir(join(target, 'resources'), { recursive: true });
+      await mkdir(join(target, 'docs'));
+      await writeFile(join(target, 'docs', 'portable.json'), JSON.stringify({ app: 'Tarkov Workbench', distribution: 'portable', version: '1.9.0.3' }));
+      await writeFile(join(target, 'resources', 'app.asar'), 'old app');
+      const launcher = join(process.env.SystemRoot, 'System32', 'where.exe');
+      await writeFile(join(target, 'Tarkov-Workbench.exe'), await readFile(launcher));
+      await mkdir(stage);
+      const stagedHelper = join(stage, 'apply-update.ps1');
+      await writeFile(stagedHelper, await readFile(helper));
+      const files = [{ name: 'resources/app.asar', text: 'new app' }, { name: 'Tarkov-Workbench.exe', source: launcher }, { name: 'docs/portable.json', text: JSON.stringify({ app: 'Tarkov Workbench', distribution: 'portable', version: '1.9.0.4' }) }];
+      powershell(['-Command', createZip], { WB_UPDATE_TEST: JSON.stringify({ zip: join(stage, 'Tarkov-Workbench-Online-Portable.zip'), files }) });
+      // Same serialization as the desktop updater: UTF-8 without BOM.
+      await writeFile(config, JSON.stringify({ target, stage, pid: 2147483647, version: '1.9.0.4', outcome: join(root, 'outcome.json') }));
+      const run = mode => powershell(['-File', stagedHelper, '-Config', config, '-Mode', mode]);
+      run('Prepare');
+      if (scenario.endsWith('lock') || scenario === 'locked') {
+        // Hold app.asar without sharing, as antivirus scans or lingering processes can.
+        const quote = value => value.replace(/'/g, "''");
+        const seconds = scenario === 'locked' ? 40 : 3;
+        lock = spawn('powershell.exe', ['-NoProfile', '-NonInteractive', '-Command', `$f=[IO.File]::Open('${quote(join(target, 'resources', 'app.asar'))}','Open','Read','None'); Set-Content -LiteralPath '${quote(join(root, 'locked'))}' 'yes'; Start-Sleep ${seconds}; $f.Close()`], { windowsHide: true, stdio: 'ignore' });
+        const deadline = Date.now() + 15000;
+        for (;;) {
+          try { await access(join(root, 'locked')); break; }
+          catch { if (Date.now() > deadline) throw new Error('The file lock did not start.'); await new Promise(resolve => setTimeout(resolve, 100)); }
+        }
+      }
+      if (scenario === 'locked') {
+        assert.throws(() => run('Apply'));
+        lock.kill(); lock = null;
+        await new Promise(resolve => setTimeout(resolve, 500));
+        // The installation stays complete in its folder, and the report says so.
+        assert.deepEqual((await readdir(target)).sort(), ['Tarkov-Workbench.exe', 'docs', 'resources']);
+        assert.equal(await readFile(join(target, 'resources', 'app.asar'), 'utf8'), 'old app');
+        assert.match(await readFile(join(root, 'outcome.json'), 'utf8'), /previous version was retained in its original folder/);
+      } else {
+        run('Apply');
+        assert.equal(await readFile(join(target, 'resources', 'app.asar'), 'utf8'), 'new app');
+        await assert.rejects(access(stage));
+      }
+    } finally {
+      lock?.kill();
+      await new Promise(resolve => setTimeout(resolve, 300));
+      await rm(root, { recursive: true, force: true, maxRetries: 10, retryDelay: 300 });
+    }
+  }
 });

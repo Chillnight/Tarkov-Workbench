@@ -18,11 +18,14 @@ export function dominatedLeafNodes(catalog,options,nodes){
     if(!groups.has(key))groups.set(key,[]);groups.get(key).push(entry);
   }
   for(const choices of groups.values()){
+    // Mirror the optimizer's tie-break order for equal-performance builds.
+    const lighterFirst=options.preferLighterParts!==false;
     const better=(a,b)=>{
       if(options.maxBudget!=null&&(a.unpriced>b.unpriced||a.price>b.price))return false;
-      if(a.weight!==b.weight)return a.weight<b.weight;
+      if(lighterFirst&&a.weight!==b.weight)return a.weight<b.weight;
       if(a.unpriced!==b.unpriced)return a.unpriced<b.unpriced;
       if(a.price!==b.price)return a.price<b.price;
+      if(a.weight!==b.weight)return a.weight<b.weight;
       return a.node.index<b.node.index;
     };
     for(const choice of choices)if(choices.some(other=>other!==choice&&better(other,choice)))removed.push(choice.node);

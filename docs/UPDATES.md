@@ -82,3 +82,9 @@ The existing item export supplies Flea Market eligibility, item unlock levels an
 ## Handguard thermal data (v1.9.0.7)
 
 The same confirmed item download imports recorded heat and cooling factors. Old databases remain usable, but require **Update database** once to load these fields. The catalog hash changes for the importer revision, so unchanged source exports still refresh old snapshots. Engine 1.9.0.7 invalidates earlier calculation caches. No new data host or automatic download is introduced. Unknown factors are displayed as not supplied and never used to claim a thermal improvement. See TRADERS-AND-LOADOUT.md for selection rules and limitations.
+
+## Program update reliability (1.9.0.8)
+
+The update helper now waits until no process runs from the app folder, including Electron helper processes. It replaces the folder with single atomic renames: if a file is locked, for example by an antivirus scan, the installed app stays complete in its folder and the helper retries for a short time before reporting the failure. The failure notice describes the state actually found on disk. Install and profile paths with non-ASCII characters (for example `Jürgen`) and square brackets are supported. The restarted app opens in a normal window.
+
+If the quick suppressor check cannot finish in time, the variant is no longer blocked: **Calculate build** verifies the complete assembly with its own, longer time limits. A calculation stage that cannot finish keeps the previous valid build and reports "optimum not confirmed" instead of failing.

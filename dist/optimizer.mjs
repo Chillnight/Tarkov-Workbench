@@ -7,7 +7,7 @@ import {mountProfile,isSpecialMount} from './mount-profiles.mjs';
 import {MAGAZINE_MINIMUMS} from './magazine-preferences.mjs';
 import {dominatedLeafNodes} from './equivalent-parts.mjs';
 import {preferThermalHandguards} from './thermal-handguards.mjs';
-export const ENGINE_VERSION = '1.9.0.7';
+export const ENGINE_VERSION = '1.9.0.8';
 const clamp = value => Math.min(100, Math.max(0, value));
 const rounded = value => Math.round(value * 1e8) / 1e8;
 function expression(terms) {
@@ -86,7 +86,7 @@ export function createProblem(catalog, options) {
   for (const node of nodes) {
     const factoryCount=factoryPartCount(node.item,options,catalog);
     if(factoryCount){
-      if(!cheapestOffer(node.item,options))constraints.push(`${node.x} <= ${factoryCount}`);
+      if(options.restrictTraders&&!cheapestOffer(node.item,options))constraints.push(`${node.x} <= ${factoryCount}`);
       node.purchase=`p${node.index}`;
       integers.push(node.purchase);bounds.push(`0 <= ${node.purchase} <= ${node.max}`);
       constraints.push(`${node.purchase} - ${node.x} >= ${-factoryCount}`);
@@ -191,7 +191,7 @@ export function validateBuild(catalog, options, rows) {
     if(!item){errors.push('Unknown item');continue;}
     if(!isAvailable(item,options,catalog))errors.push(`Item excluded by availability settings: ${item.shortName}`);
     const factoryCount=factoryPartCount(item,options,catalog);
-    if(factoryCount&&!cheapestOffer(item,options)&&occurrences.filter(r=>r.itemId===item.id).length>factoryCount)errors.push(`Factory quantity exceeded: ${item.shortName}`);
+    if(factoryCount&&options.restrictTraders&&!cheapestOffer(item,options)&&occurrences.filter(r=>r.itemId===item.id).length>factoryCount)errors.push(`Factory quantity exceeded: ${item.shortName}`);
     if(index>0 && (!Number.isInteger(row.parent)||row.parent<0||row.parent>=index)) {errors.push('Invalid assembly chain');continue;}
     for(const slot of item.slots) {
       const children=occurrences.filter((r,i)=>i>0&&r.parent===index&&r.slotId===slot.id);
@@ -231,7 +231,12 @@ export function validateBuild(catalog, options, rows) {
   });
   return [...new Set(errors)];
 }
+class UnprovenBuild extends Error {}
 export function optimize(catalog, options, solver, progress=()=>{}) {
+  try { return optimizeBuild(catalog,options,solver,progress); }
+  catch(error) { if(error instanceof UnprovenBuild) return {status:'unproven',message:error.message}; throw error; }
+}
+function optimizeBuild(catalog, options, solver, progress) {
   if(!['ergo','recoil','balanced'].includes(options.mode)) throw new Error('Invalid build objective.');
   if(!Number.isFinite(options.balance)||options.balance<0||options.balance>100) throw new Error('Invalid ergonomics threshold.');
   if(options.maxBudget!==null&&options.maxBudget!==undefined&&(!Number.isSafeInteger(options.maxBudget)||options.maxBudget<1||options.maxBudget>100000000))throw new Error('Invalid attachment budget.');
@@ -239,12 +244,25 @@ export function optimize(catalog, options, solver, progress=()=>{}) {
   const {nodes,lp,ergoTerms,recoilTerms,mountTerms,highMountTerms,specialMountTerms,nonLowMountTerms,weightTerms,countTerms,priceTerms,unpricedTerms,magazineFitTerms}=problem;
   const extra=[]; let allOptimal=true, latest, maxErgo=null, floor=null;
   const sum=(result,terms)=>rounded(terms.reduce((s,[v,k])=>s+v*(result.Columns?.[k]?.Primal??0),0));
+  const settings={output_flag:false,time_limit:30,mip_rel_gap:0,mip_abs_gap:0};
+  // A solution is usable only with finite values and an installed weapon. A timeout
+  // without an incumbent reports zero columns and must never become a build.
+  const usable=result=>(result?.Status==='Optimal'||/limit/i.test(result?.Status??''))&&Boolean(result.Columns)&&Number.isFinite(result.ObjectiveValue)&&
+    Object.values(result.Columns).every(c=>Number.isFinite(c.Primal))&&Math.round(result.Columns[problem.root.x]?.Primal??0)===1;
   function solve(objective,label) {
     progress(label);
-    const result=solver.solve(lp(objective,extra),{output_flag:false,time_limit:30,mip_rel_gap:0,mip_abs_gap:0});
-    if(result.Status==='Infeasible') return null;
-    if(!result.Columns||!Object.values(result.Columns).every(c=>Number.isFinite(c.Primal))) throw new Error(`No valid solution (${result.Status}). Please try again.`);
-    allOptimal&&=result.Status==='Optimal'; latest=result; return result;
+    const text=lp(objective,extra);
+    let result=solver.solve(text,settings);
+    // Every later stage only adds bounds that the previous solution satisfies, so
+    // an infeasible verdict there is numerical. Confirm it once without presolve.
+    if(latest&&result.Status==='Infeasible')result=solver.solve(text,{...settings,presolve:'off'});
+    if(usable(result)){allOptimal&&=result.Status==='Optimal';latest=result;return result;}
+    if(!latest){
+      if(result.Status==='Infeasible')return null;
+      throw new UnprovenBuild('No valid build was found within the calculation time limit. Please try again or simplify the selection.');
+    }
+    // Keep the previous valid solution when a refinement stage cannot finish.
+    allOptimal=false;return latest;
   }
   if(options.magazine>1&&!options.magazineId&&magazineFitTerms.length){
     const preferred=solve('magazineFit','Finding the closest compatible magazine capacity …');
@@ -288,12 +306,29 @@ export function optimize(catalog, options, solver, progress=()=>{}) {
     }
     latest=solve('price','Choosing the cheapest equivalent vendor build …')??before;
   }
-  const best=solve('weight','Choosing the lightest build at equal performance …');
-  if(!best)throw new Error('Weight optimization failed.');
-  extra.push(`${expression(weightTerms)} <= ${sum(best,weightTerms)+1e-7}`);
-  const compact=solve('count','Removing unnecessary parts …');
-  latest=compact??best;
-  priceTieBreak();
+  // Between builds with equal objective stats, "Prefer lighter parts" (default) ranks
+  // weight before part count and price. Turned off, known offers and the lowest price
+  // come first, so free factory parts are kept; part count and weight then break ties.
+  const lighterFirst=options.preferLighterParts!==false;
+  function equivalentTieBreaks(weightLabel,countLabel){
+    if(lighterFirst){
+      const lightest=solve('weight',weightLabel);
+      extra.push(`${expression(weightTerms)} <= ${sum(lightest,weightTerms)+1e-7}`);
+      solve('count',countLabel);
+      priceTieBreak();
+    }else{
+      if(unpricedTerms.length){
+        const known=solve('unpriced','Preferring available vendor offers between equivalent builds …');
+        extra.push(`${expression(unpricedTerms)} = ${Math.round(sum(known,unpricedTerms))}`);
+      }
+      const cheapest=solve('price','Choosing the cheapest equivalent vendor build …');
+      extra.push(`${expression(priceTerms)} <= ${sum(cheapest,priceTerms)+1e-6}`);
+      const compact=solve('count',countLabel);
+      extra.push(`${expression(countTerms)} = ${Math.round(sum(compact,countTerms))}`);
+      solve('weight',weightLabel);
+    }
+  }
+  equivalentTieBreaks('Choosing the lightest build at equal performance …','Removing unnecessary parts …');
   const baseline=latest,baselineErgo=clamp(sum(baseline,ergoTerms)),baselineRecoil=sum(baseline,recoilTerms);
   const baselineMounts=Math.round(sum(baseline,mountTerms)),baselineHigh=Math.round(sum(baseline,highMountTerms)),baselineNonLow=Math.round(sum(baseline,nonLowMountTerms));
   const baselineSpecial=Math.round(sum(baseline,specialMountTerms));
@@ -322,13 +357,7 @@ export function optimize(catalog, options, solver, progress=()=>{}) {
       if(ergonomic){
         const keepErgo=clamp(sum(ergonomic,ergoTerms));
         if(keepErgo>0)extra.push(`${expression(ergoTerms)} >= ${keepErgo-1e-7}`);
-        const lighter=solve('weight','Choosing the lighter practical mounting system …');
-        if(lighter){
-          extra.push(`${expression(weightTerms)} <= ${sum(lighter,weightTerms)+1e-7}`);
-          const minimal=solve('count','Removing redundant mounting parts …');
-          latest=minimal??lighter;
-          priceTieBreak();
-        }else latest=ergonomic;
+        equivalentTieBreaks('Choosing the lighter practical mounting system …','Removing redundant mounting parts …');
         floor=practicalFloor;
         practical={...practical,applied:true,specialMountsRemoved:baselineSpecial-Math.round(sum(latest,specialMountTerms)),highMountsRemoved:baselineHigh-Math.round(sum(latest,highMountTerms)),lowerProfile:Math.round(sum(latest,highMountTerms))<baselineHigh||Math.round(sum(latest,nonLowMountTerms))<baselineNonLow,ergoLoss:rounded(baselineErgo-clamp(sum(latest,ergoTerms))),mountsRemoved:baselineMounts-Math.round(sum(latest,mountTerms))};
       }else latest=baseline;
@@ -355,7 +384,10 @@ export function optimize(catalog, options, solver, progress=()=>{}) {
   if(errors.length) throw new Error(`Compatibility validation failed: ${errors.join('; ')}`);
   const cost=buildCost(catalog,options,rows);
   if(options.maxBudget!=null&&(cost.unpriced||cost.priceRUB>options.maxBudget+0.01))throw new Error('The result exceeds the attachment budget.');
-  const rawErgo=sum(latest,ergoTerms), recoil=sum(latest,recoilTerms), weapon=problem.root.item;
+  // Report the stats of the final parts, not solver column values.
+  const statTotal=key=>rounded([options.weaponId,...rows.map(row=>row.itemId)].reduce((total,id)=>total+(catalog.items[id][key]??0),0));
+  const rawErgo=statTotal('ergo'), recoil=statTotal('recoil'), weapon=problem.root.item;
+  if(Math.abs(rawErgo-sum(latest,ergoTerms))>1e-4||Math.abs(recoil-sum(latest,recoilTerms))>1e-6)throw new Error('The assembled parts do not match the optimized stats.');
   if(practical.applied&&(baselineErgo-clamp(rawErgo)>4+1e-5||Math.abs(recoil-baselineRecoil)>1e-6))throw new Error('Practical mounting limits were not met.');
   if(floor>0&&clamp(rawErgo)<floor-1e-5) throw new Error('The ergonomics threshold was not met.');
   const weight=[options.weaponId,...rows.map(row=>row.itemId)].reduce((sum,id)=>sum+(catalog.items[id].weight??0),0);

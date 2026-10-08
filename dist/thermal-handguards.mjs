@@ -24,7 +24,8 @@ export function preferThermalHandguards(catalog,options,originalRows,validateBui
         if(next)choices.push({item:candidate,rows:next,cost:buildCost(catalog,options,next)});
       }
       const front=choices.filter(choice=>!choices.some(other=>other!==choice&&thermalDominates(other.item,choice.item)));
-      front.sort((a,b)=>(a.item.weight??0)-(b.item.weight??0)||a.cost.unpriced-b.cost.unpriced||a.cost.priceRUB-b.cost.priceRUB||a.item.name.localeCompare(b.item.name,'en'));
+      const weight=(a,b)=>(a.item.weight??0)-(b.item.weight??0),price=(a,b)=>a.cost.unpriced-b.cost.unpriced||a.cost.priceRUB-b.cost.priceRUB;
+      front.sort((a,b)=>(options.preferLighterParts!==false?weight(a,b)||price(a,b):price(a,b)||weight(a,b))||a.item.name.localeCompare(b.item.name,'en'));
       if(front.length){
         rows=front[0].rows;swaps.push({rowIndex:index,from:current.id,to:front[0].item.id});changed=true;
       }

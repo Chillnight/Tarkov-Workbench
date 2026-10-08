@@ -29,4 +29,9 @@ export const isUnderbarrelLauncher = item => item?.category==='UBGL'||item?.cate
 export const isAvailable = (item,options={},catalog) => Boolean(item) && (options.excludeArenaUnlocks===false || !arenaUnlock(item)) &&
   (options.allowGrenadeLaunchers===true||!isUnderbarrelLauncher(item)) &&
   (!options.restrictTraders||item.id===options.weaponId||isIncludedFactoryPart(item,options,catalog)||Boolean(cheapestOffer(item,options)));
+// One normalized view of every setting that isAvailable() and its offer checks read.
+// Cache keys use it so that no availability setting can be forgotten again.
+export const availabilityKey = (options={}) => ({excludeArenaUnlocks:options.excludeArenaUnlocks!==false,allowGrenadeLaunchers:options.allowGrenadeLaunchers===true,
+  restrictTraders:Boolean(options.restrictTraders),traderLevels:options.traderLevels??null,includeQuestOffers:options.includeQuestOffers!==false,
+  includeBarters:options.includeBarters!==false,includeFleaMarket:options.includeFleaMarket===true});
 export const availabilityLabel = options => options.excludeArenaUnlocks===false ? 'Arena unlocks allowed' : 'Known Arena unlocks excluded';

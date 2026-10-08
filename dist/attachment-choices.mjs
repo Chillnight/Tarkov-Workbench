@@ -17,9 +17,9 @@ export function reachableMagazines(catalog,weaponId,options={}){
   visit(weaponId);
   return [...found.values()].sort((a,b)=>a.capacity-b.capacity||a.name.localeCompare(b.name,'en'));
 }
-export function compatibleChoice(catalog,options,solver){
+export function compatibleChoice(catalog,options,solver,timeLimit=5){
   const problem=createProblem(catalog,options);
-  const result=solver.solve(problem.lp('feasibility'),{output_flag:false,time_limit:5,mip_rel_gap:0,mip_abs_gap:0});
+  const result=solver.solve(problem.lp('feasibility'),{output_flag:false,time_limit:timeLimit,mip_rel_gap:0,mip_abs_gap:0});
   // A zero-objective optimum proves a complete feasible assembly. A timeout is
   // reported as unchecked, never guessed compatible or incompatible.
   return result.Status==='Optimal'?'compatible':result.Status==='Infeasible'?'incompatible':'unchecked';

@@ -1,5 +1,5 @@
 // Author: CA
-import {isAvailable} from './availability.mjs';
+import {isAvailable,availabilityKey} from './availability.mjs';
 import {isOptic} from './optics.mjs';
 import {compatibleChoice} from './attachment-choices.mjs';
 
@@ -26,6 +26,7 @@ export function suppressorVariants(catalog,weaponId,options={}){
   return {silenced,unsilenced:Boolean(weapon&&withoutSuppressor(weaponId))};
 }
 
+export const VARIANT_TIME_LIMIT=20;
 // Prove weapon variants independently of pinned accessories and spending caps.
 // Those choices remain unchanged and are validated by the full build calculation.
 export function verifySuppressorVariants(catalog,weaponId,options,solver){
@@ -33,12 +34,13 @@ export function verifySuppressorVariants(catalog,weaponId,options,solver){
   const physical={...options,weaponId,scopeId:null,magazineId:null,magazine:1,maxBudget:null,restrictTraders:false,excludeArenaUnlocks:false};
   const statuses={};
   for(const sound of ['silenced','unsilenced']){
-    const proof=compatibleChoice(catalog,{...physical,sound},solver);
+    // Large AR-15 assemblies need several seconds; allow more time than a picker card.
+    const proof=compatibleChoice(catalog,{...physical,sound},solver,VARIANT_TIME_LIMIT);
     statuses[sound]=proof==='compatible'&&!reachable[sound]?'unavailable':proof;
   }
   return statuses;
 }
 
 export function variantCacheKey(catalog,options){
-  return JSON.stringify({version:catalog?.meta?.version,weaponId:options.weaponId,excludeArenaUnlocks:options.excludeArenaUnlocks,allowGrenadeLaunchers:options.allowGrenadeLaunchers,restrictTraders:options.restrictTraders,traderLevels:options.traderLevels,includeQuestOffers:options.includeQuestOffers,includeBarters:options.includeBarters});
+  return JSON.stringify({version:catalog?.meta?.version,weaponId:options.weaponId,...availabilityKey(options)});
 }

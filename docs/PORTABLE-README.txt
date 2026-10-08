@@ -1,4 +1,4 @@
-TARKOV WORKBENCH 1.9.0.7
+TARKOV WORKBENCH 1.9.0.8
 Author: CA
 
 Handguard heat and cooling are shown beside attachment stats. Compatible

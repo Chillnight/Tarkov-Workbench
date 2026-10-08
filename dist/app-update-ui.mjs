@@ -67,7 +67,7 @@ export function setupAppUpdates() {
         title.textContent = `Version ${result.version} is available`;
         message.textContent = `Download the update from GitHub? Download size: ${(result.size / 1024 / 1024).toFixed(1)} MB.`;
         if (result.canInstall) {
-          note.textContent = 'The download is verified before the app files are replaced. Tarkov Workbench will restart. Your database and settings in your user profile are kept. The previous app folder is retained as a recovery backup.';
+          note.textContent = 'The download is verified before the app files are replaced. Tarkov Workbench will restart. Your database and settings in your user profile are kept. A rollback copy of the previous version is kept only during installation and removed after a successful restart.';
           install.hidden = false;
         } else {
           note.textContent = 'Download and extract the ZIP into a separate folder, then open Tarkov-Workbench.exe. Your existing database and settings are kept. Automatic replacement is available in the Windows portable app.';
