@@ -1,4 +1,4 @@
-TARKOV WORKBENCH 1.9.0.8
+TARKOV WORKBENCH 1.9.0.9
 Author: CA
 
 Handguard heat and cooling are shown beside attachment stats. Compatible
@@ -9,7 +9,7 @@ after upgrading an older saved snapshot to load these fields.
 
 Extract the entire ZIP to a new folder. Double-click Tarkov-Workbench.exe.
 Keep all extracted files and folders together; they are required.
-Close any older running instance first. The GUI header shows v1.9.0.6.
+Close any older running instance first. The GUI header shows v1.9.0.9.
 
 Windows 10/11 x64. No installation, browser, Node.js or account required.
 The root EXE starts the bundled Electron runtime directly. The application,
@@ -28,6 +28,13 @@ No scope defaults to iron sights. Scope and mount effects are included.
 Select an objective and suppressor variant, then Calculate build.
 No build is loaded or calculated before this explicit action.
 Copy list exports a build as text. There is no personal preset library yet.
+
+BEST IN CATEGORY
+Compare complete optimized builds across a category and optional caliber.
+Choose an objective and suppressor mode, then Find best weapons. Open a
+ranked result in the regular builder. Current availability rules and the
+maximum attachment budget apply; weapons are assumed already owned.
+See docs/CATEGORY-COMPARISON.md for ranking rules and limitations.
 
 MANUAL DATABASE UPDATES
 Choose Update database below Retrieved, then Download update to confirm.

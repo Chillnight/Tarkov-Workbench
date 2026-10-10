@@ -1,4 +1,4 @@
-TARKOV WORKBENCH 1.9.0.8 - ONLINE SETUP EDITION
+TARKOV WORKBENCH 1.9.0.9 - ONLINE SETUP EDITION
 Author: CA
 
 Keep this whole folder together. Start Tarkov-Workbench.exe in this folder.
@@ -41,6 +41,13 @@ before optimization without changing performance or compatibility priorities.
 Factory-preset parts remain available without standalone offers, and
 iron-sight routes are checked across the assembly.
 Factory parts are included with the selected weapon and need no extra purchase.
+
+BEST IN CATEGORY
+Use the Best in category tab to compare complete builds across a category.
+Optionally narrow by caliber, choose an objective and suppressor mode,
+then Find best weapons. Shared availability and attachment budget rules
+apply. Open a selected result in the regular builder to inspect its parts.
+See CATEGORY-COMPARISON.md for ranking rules and comparison limitations.
 
 HANDGUARD HEAT AND COOLING
 At equal Ergo/recoil, compatible handguard replacements may be preferred

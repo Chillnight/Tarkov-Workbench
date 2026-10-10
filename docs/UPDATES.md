@@ -2,9 +2,13 @@
 
 Author: CA
 
+## Category comparison (1.9.0.9)
+
+The new **Best in category** tab compares complete builds for a selected weapon category and optional caliber. Comparisons start only when requested, honor current availability and attachment-spending settings, report skipped and unproven candidates, and can be cancelled. A selected complete result can be opened in the regular builder without recalculating. See [category comparison](CATEGORY-COMPARISON.md) for ranking rules and limitations. No new data download is required for this feature if a valid local database is already present.
+
 ## Program updates
 
-**Check for updates** checks the latest stable release at [Chillnight/Tarkov-Workbench](https://github.com/Chillnight/Tarkov-Workbench/releases/latest). It is separate from **Update database**, needs no GitHub account and runs only when clicked. A numeric version comparison supports three- and four-component release tags, including `v1.9.0.3`. Equal or lower versions show **You’re up to date — No newer version was found**. Drafts and prereleases are not installed. Offline, rate-limited, malformed or incomplete responses show an error rather than claiming the app is current.
+**Check for updates** checks the latest stable [Tarkov Workbench release](https://github.com/Chillnight/Tarkov-Workbench/releases/latest). It is separate from **Update database**, needs no GitHub account and runs only when clicked. A numeric version comparison supports three- and four-component release tags, including `v1.9.0.3`. Equal or lower versions report that no newer version was found. Drafts and prereleases are not installed. Offline, rate-limited, malformed or incomplete responses show an error rather than claiming the app is current.
 
 If a newer release exists, the Windows portable app asks before **Download and restart**. It downloads the release ZIP and its matching `.sha256` asset from GitHub, checks the exact length and SHA-256 hash, and validates archive paths before extraction. No extra native dependency or signing certificate is added. Both assets must be published together using the existing portable filenames.
 

@@ -9,7 +9,9 @@ import {reachableMagazines} from './attachment-choices.mjs';
 import {MAGAZINE_MINIMUMS,normalizeMagazineMinimum,magazineMinimumLabel} from './magazine-preferences.mjs';
 import {setupSettings} from './settings-ui.mjs';
 import {defaultTraderSettings,normalizeTraderSettings,offerLabel,buildCost,TRADERS} from './traders.mjs';
-import {ENGINE_VERSION} from './optimizer.mjs';
+import {ENGINE_VERSION,validateBuild} from './optimizer.mjs';
+import {setupCategoryComparison} from './category-ui.mjs';
+import {profileFingerprint,transferIsCurrent} from './category-transfer.mjs';
 import {createShoppingList,formatShoppingList} from './shopping-list.mjs';
 import {hasFleaData,fleaOfferLabel} from './flea-market.mjs';
 import {hasThermalData,thermalLabel} from './thermal-stats.mjs';
@@ -21,15 +23,75 @@ import {isOptic,reachableOptics,zoomLabel} from './optics.mjs';
 import {findAlternatives,applyAlternative,alternativeWeightLabel} from './alternatives.mjs';
 import {arenaUnlock,isAvailable,availabilityLabel,AVAILABILITY_REVIEWED} from './availability.mjs';
 const $=id=>document.getElementById(id);
+let categoryComparison=null;
+let switchWorkbenchTab=null;
+let categoryTransferToken=0;
+let categoryTransferInFlight=false;
+function ensureCategoryShell(){
+  const workspace=document.querySelector('.workspace');
+  if(!workspace||document.getElementById('workbench-tabs'))return;
+  const stylesheet=document.createElement('link');stylesheet.rel='stylesheet';stylesheet.href='category.css';document.head.append(stylesheet);
+  const tabs=document.createElement('nav');tabs.id='workbench-tabs';tabs.className='workbench-tabs';tabs.setAttribute('aria-label','Workbench mode');tabs.setAttribute('role','tablist');
+  const builderTab=document.createElement('button');builderTab.type='button';builderTab.dataset.workbenchTab='weapon';builderTab.id='workbench-tab-weapon';builderTab.setAttribute('role','tab');builderTab.setAttribute('aria-selected','true');builderTab.setAttribute('aria-controls','weapon-builder-panel');builderTab.textContent='Weapon builder';
+  const categoryTab=document.createElement('button');categoryTab.type='button';categoryTab.dataset.workbenchTab='category';categoryTab.id='workbench-tab-category';categoryTab.setAttribute('role','tab');categoryTab.setAttribute('aria-selected','false');categoryTab.setAttribute('aria-controls','category-builder-panel');categoryTab.textContent='Best in category';
+  tabs.append(builderTab,categoryTab);workspace.before(tabs);
+  const builderPanel=document.createElement('div');builderPanel.id='weapon-builder-panel';builderPanel.dataset.workbenchPanel='weapon';builderPanel.setAttribute('role','tabpanel');builderPanel.setAttribute('aria-labelledby','workbench-tab-weapon');workspace.replaceWith(builderPanel);builderPanel.append(workspace);
+  const categoryPanel=document.createElement('section');categoryPanel.id='category-builder-panel';categoryPanel.dataset.workbenchPanel='category';categoryPanel.setAttribute('role','tabpanel');categoryPanel.setAttribute('aria-labelledby','workbench-tab-category');categoryPanel.hidden=true;builderPanel.after(categoryPanel);
+  switchWorkbenchTab=function(tab){
+    const category=tab==='category';
+    builderPanel.hidden=category;categoryPanel.hidden=!category;
+    builderTab.setAttribute('aria-selected',String(!category));categoryTab.setAttribute('aria-selected',String(category));
+    if(category&&state.running)cancel();
+    if(!category&&categoryComparison?.isRunning())categoryComparison.cancel();
+  };
+  tabs.addEventListener('click',event=>{
+    const button=event.target.closest('[data-workbench-tab]');
+    if(button)switchWorkbenchTab(button.dataset.workbenchTab);
+  });
+  tabs.addEventListener('keydown',event=>{
+    const buttons=[builderTab,categoryTab];
+    const current=buttons.indexOf(event.target);
+    if(current<0)return;
+    let next=current;
+    if(event.key==='ArrowRight'||event.key==='ArrowDown')next=(current+1)%buttons.length;
+    else if(event.key==='ArrowLeft'||event.key==='ArrowUp')next=(current+buttons.length-1)%buttons.length;
+    else if(event.key==='Home')next=0;
+    else if(event.key==='End')next=buttons.length-1;
+    else return;
+    event.preventDefault();
+    buttons[next].focus();
+    switchWorkbenchTab(buttons[next].dataset.workbenchTab);
+  });
+  switchWorkbenchTab('weapon');
+}
 const state={catalog:null,weapons:[],selectedWeaponId:null,worker:null,result:null,mode:'balanced',sound:'silenced',scopeId:null,magazineId:null,traderSettings:defaultTraderSettings(),optics:[],running:false,run:0,precomputed:{},cancelCurrent:null,picker:null,bundled:null,snapshot:null,imageURLs:new Map(),updating:false,precomputedLoaded:false};
+ensureCategoryShell();
 const number=(n,digits=1)=>Number(n).toLocaleString('en-GB',{maximumFractionDigits:digits});
 const signed=(n,digits=1)=>`${n>0?'+':''}${number(n,digits)}`;
 const date=value=>new Date(value).toLocaleString('en-GB',{dateStyle:'medium',timeStyle:'short'});
+function sharedSettingsFingerprint(value=options()){
+  const levels=value?.traderLevels&&typeof value.traderLevels==='object'
+    ? Object.fromEntries(Object.entries(value.traderLevels).sort(([left],[right])=>left.localeCompare(right)))
+    : null;
+  return JSON.stringify({
+    restrictTraders:value?.restrictTraders!==false,
+    traderLevels:levels,
+    includeFleaMarket:value?.includeFleaMarket!==false,
+    includeBarters:value?.includeBarters!==false,
+    includeQuestOffers:value?.includeQuestOffers!==false,
+    allowGrenadeLaunchers:value?.allowGrenadeLaunchers===true,
+    excludeArenaUnlocks:value?.excludeArenaUnlocks!==false,
+    preferPracticalMounts:value?.preferPracticalMounts!==false,
+    preferLighterParts:value?.preferLighterParts!==false,
+    maxBudget:value?.maxBudget??null
+  });
+}
 function element(tag,className,text){const el=document.createElement(tag);if(className)el.className=className;if(text!==undefined)el.textContent=text;return el;}
 function notice(message,error=false){$('result-status').textContent=message;$('result-status').classList.toggle('error',error);}
 const imageURL=path=>state.imageURLs.get(path)??path;
 function options(){return {weaponId:$('weapon').value,mode:state.mode,sound:state.sound,balance:Number($('balance').value),magazine:state.magazineId?1:Number($('magazine').value),magazineId:state.magazineId,scopeId:state.scopeId,maxBudget:$('budget-enabled').checked?Number($('budget-amount').value):null,allowGrenadeLaunchers:$('allow-launchers').checked,...state.traderSettings,excludeArenaUnlocks:$('exclude-arena').checked,preferPracticalMounts:$('practical-mounts').checked,preferLighterParts:$('prefer-lighter').checked};}
 const notifyUser=setupFeedback();
+categoryComparison=setupCategoryComparison({getCatalog:()=>state.catalog,getSharedOptions:options,imageURL,notify:notifyUser,onOpenBuild:openCategoryBuild});
 const variantSelection=setupVariantSelection({getCatalog:()=>state.catalog,getOptions:options,getSound:()=>state.sound,notify:notifyUser,onSoundChange:sound=>{if(state.sound!==sound){state.sound=sound;invalidate();}}});
 function validateSelection(){
   const issue=validateBuildInputs(options());
@@ -56,6 +118,7 @@ function refreshAvailability(){
   }));
   $('availability-status').textContent=`${availabilityLabel(selection)} · Rules reviewed ${AVAILABILITY_REVIEWED}`;
   $('data-status').textContent=`${state.weapons.length} selectable weapons / ${state.catalog.meta.modCount} attachments · saved locally\nRetrieved: ${date(state.catalog.meta.fetchedAt)}`;
+  categoryComparison?.refresh();
   weaponChanged();
   if(selected&&!state.weapons.some(item=>item.id===selected))notice('The selected weapon requires an Arena unlock and was cleared by the availability filter. Choose another weapon.');
 }
@@ -101,6 +164,7 @@ function traderSummary(){
 }
 function invalidate(){
   if(state.running)cancel();
+  categoryComparison?.invalidate();
   state.result=null;$('stats').hidden=true;$('copy').disabled=true;$('build-section').hidden=true;$('welcome-guide').hidden=false;
   $('parts').replaceChildren(element('div','empty','Selection ready. Calculate your compatible build.'));
   $('build-caption').textContent='Adapters and required parts are listed in assembly order.';
@@ -134,6 +198,49 @@ function setMode(mode){state.mode=mode;document.querySelectorAll('[data-mode]').
 async function setSound(sound){return variantSelection.select(sound);}
 function busy(value){state.running=value;$('calculate').disabled=value||!$('weapon').value||state.updating;$('cancel').hidden=!value;$('calculate').firstChild.textContent=value?'Calculating build … ':'Calculate build ';}
 function cancel(){state.run++;state.worker?.terminate();state.worker=null;state.cancelCurrent?.();state.cancelCurrent=null;busy(false);notice('Calculation cancelled. Change your selection or try again.');}
+async function openCategoryBuild(entry){
+  if(categoryTransferInFlight)return false;
+  if(!entry?.selection||!entry.result||!state.catalog)return false;
+  categoryTransferInFlight=true;
+  const transferToken=++categoryTransferToken;
+  const catalogAtStart=state.catalog;
+  const sharedFingerprintAtStart=sharedSettingsFingerprint();
+  const sourceFingerprint=sharedSettingsFingerprint(entry.selection);
+  let preparedProfileFingerprint=null;
+  const stillCurrent=()=>!state.updating&&!state.running&&sharedSettingsFingerprint()===sharedFingerprintAtStart&&preparedProfileFingerprint!==null&&transferIsCurrent({catalog:state.catalog,expectedCatalog:catalogAtStart,currentProfile:options(),expectedProfile:preparedProfileFingerprint,token:categoryTransferToken,expectedToken:transferToken});
+  try{
+    if(state.updating||sourceFingerprint!==sharedFingerprintAtStart){
+      notifyUser('Could not open build','This comparison is stale because the shared settings changed. Run the category comparison again.');
+      return false;
+    }
+    if(state.running)cancel();
+    const selection={...entry.selection,scopeId:null,magazineId:null,magazine:1};
+    delete selection.category;delete selection.caliber;
+    const item=catalogAtStart.items[selection.weaponId];
+    if(!item||!isAvailable(item,selection,catalogAtStart)){notifyUser('Could not open build','This weapon is no longer available with the current shared settings. Refresh the category comparison and try again.');return false;}
+    const errors=validateBuild(catalogAtStart,selection,entry.result.rows);
+    if(errors.length){notifyUser('Could not open build','The selected assembly is no longer valid: '+errors.join('; '));return false;}
+    if(!state.picker?.select(selection.weaponId)){notifyUser('Could not open build','The selected weapon is not available in the current weapon list.');return false;}
+    state.scopeId=null;state.magazineId=null;weaponChanged();setMode(selection.mode);
+    $('balance').value=Number.isFinite(selection.balance)?selection.balance:80;renderBalance();
+    $('magazine').value='1';renderScopeSelection();renderMagazineSelection();
+    preparedProfileFingerprint=profileFingerprint({...options(),sound:selection.sound});
+    if(!await setSound(selection.sound))return false;
+    if(!stillCurrent()){
+      notifyUser('Could not open build','The comparison became stale while the suppressor setting was being checked. Run it again before opening a build.');
+      return false;
+    }
+    const currentSelection=options();
+    const currentErrors=validateBuild(catalogAtStart,currentSelection,entry.result.rows);
+    if(currentErrors.length){notifyUser('Could not open build','The current builder settings no longer validate this assembly: '+currentErrors.join('; '));return false;}
+    switchWorkbenchTab?.('weapon');
+    render(entry.result,currentSelection);
+    notice('Opened '+item.shortName+' from Best in category. The validated build was transferred without recalculation.');
+    return true;
+  }finally{
+    if(transferToken===categoryTransferToken)categoryTransferInFlight=false;
+  }
+}
 function safeLink(url,label){const a=element('a',null,label);try{const u=new URL(url);if(u.protocol==='https:'&&['escapefromtarkov.fandom.com','escapefromtarkov.wiki.gg','tarkov.dev'].includes(u.hostname)){a.href=u.href;a.target='_blank';a.rel='noreferrer';}}catch{}return a;}
 function renderShoppingList(selection,rows){
   const list=createShoppingList(state.catalog,selection,rows),details=element('details','shopping-list');
@@ -296,12 +403,12 @@ $('magazine').addEventListener('change',async()=>{
   const saved=await storage.put('settings:magazineMinimum',Number($('magazine').value));
   $('magazine-preference-status').textContent=saved?'Saved for automatic selection across weapons and restarts. A specific magazine overrides this target.':'Used for this session. Could not save the magazine target; please try again.';
 });
-$('allow-launchers').addEventListener('change',()=>{invalidate();storage.put('settings:allowGrenadeLaunchers',$('allow-launchers').checked);});
-$('practical-mounts').addEventListener('change',()=>{invalidate();storage.put('settings:preferPracticalMounts',$('practical-mounts').checked);});
-$('prefer-lighter').addEventListener('change',()=>{invalidate();storage.put('settings:preferLighterParts',$('prefer-lighter').checked);});
-$('exclude-arena').addEventListener('change',()=>{refreshAvailability();storage.put('settings:excludeArenaUnlocks',$('exclude-arena').checked);});
-$('budget-enabled').addEventListener('change',()=>{$('budget-entry').hidden=!$('budget-enabled').checked;invalidate();storage.put('settings:budgetEnabled',$('budget-enabled').checked);});
-$('budget-amount').addEventListener('change',()=>{invalidate();const value=Number($('budget-amount').value);if(Number.isSafeInteger(value)&&value>=1&&value<=100000000)storage.put('settings:maxBudget',value);});
+$('allow-launchers').addEventListener('change',()=>{invalidate();categoryComparison?.refresh();storage.put('settings:allowGrenadeLaunchers',$('allow-launchers').checked);});
+$('practical-mounts').addEventListener('change',()=>{invalidate();categoryComparison?.refresh();storage.put('settings:preferPracticalMounts',$('practical-mounts').checked);});
+$('prefer-lighter').addEventListener('change',()=>{invalidate();categoryComparison?.refresh();storage.put('settings:preferLighterParts',$('prefer-lighter').checked);});
+$('exclude-arena').addEventListener('change',()=>{refreshAvailability();categoryComparison?.invalidate();storage.put('settings:excludeArenaUnlocks',$('exclude-arena').checked);});
+$('budget-enabled').addEventListener('change',()=>{$('budget-entry').hidden=!$('budget-enabled').checked;invalidate();categoryComparison?.refresh();storage.put('settings:budgetEnabled',$('budget-enabled').checked);});
+$('budget-amount').addEventListener('change',()=>{invalidate();categoryComparison?.refresh();const value=Number($('budget-amount').value);if(Number.isSafeInteger(value)&&value>=1&&value<=100000000)storage.put('settings:maxBudget',value);});
 $('calculate').addEventListener('click',()=>calculate().catch(error=>{
   busy(false);state.result=null;$('copy').disabled=true;
   notice(`The calculation could not be completed: ${error.message}`,true);
@@ -378,9 +485,9 @@ async function init(){
     else{$('data-status').textContent='No local database yet · setup required';notice('Download game data to start using the workbench. Nothing is downloaded without your approval.');}
     if(loaded.warning)$('update-status').textContent=loaded.warning;
     let ready=false;
-    async function readyOnce(){if(ready)return;ready=true;webMCP();setupSettings({settings:state.traderSettings,theme:savedTheme,firstRun:!(await storage.get('settings:setupComplete')),onSave:next=>{const changed=JSON.stringify(state.traderSettings)!==JSON.stringify(next);state.traderSettings=next;traderSummary();if(changed)refreshAvailability();}});}
+    async function readyOnce(){if(ready)return;ready=true;webMCP();setupSettings({settings:state.traderSettings,theme:savedTheme,firstRun:!(await storage.get('settings:setupComplete')),onSave:next=>{const changed=JSON.stringify(state.traderSettings)!==JSON.stringify(next);state.traderSettings=next;traderSummary();categoryComparison?.refresh();if(changed)refreshAvailability();}});}
     const updates=setupDatabaseUpdates({getSnapshot:()=>state.snapshot,getBundled:()=>state.bundled,activate:activateDatabase,onReady:readyOnce,setBusy:value=>{
-      if(value&&state.running)cancel();state.updating=value;
+      if(value&&state.running)cancel();state.updating=value;categoryComparison?.setUpdating(value);
       document.querySelector('.controls').inert=value;
       $('calculate').disabled=value||state.running||!$('weapon').value;$('scope-change').disabled=value||!$('weapon').value;$('magazine-change').disabled=value||!$('weapon').value;$('settings-open').disabled=value||!state.catalog;
     }});

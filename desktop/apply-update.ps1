@@ -118,8 +118,13 @@ try {
   # The inherited working directory must not hold the old app folder open.
   Set-Location -LiteralPath $parent
   Set-Content -LiteralPath (Join-Path $stage 'helper-ready') -Value ([string]$PID) -Encoding ascii
-  $running = Get-Process -Id ([int]$settings.pid) -ErrorAction SilentlyContinue
-  if ($running) { Wait-Process -Id $running.Id -Timeout 120 }
+  # The parent may exit between lookup and Wait-Process. Polling treats that
+  # expected exit as success while retaining the existing timeout.
+  $parentDeadline = [DateTime]::UtcNow.AddSeconds(120)
+  while (Get-Process -Id ([int]$settings.pid) -ErrorAction SilentlyContinue) {
+    if ([DateTime]::UtcNow -ge $parentDeadline) { throw 'Tarkov Workbench did not close in time. Close it and try again.' }
+    Start-Sleep -Milliseconds 250
+  }
   Wait-AppProcesses
   # Keep rollback files only while installing; remove them after a successful launch.
   # A failed first move leaves the installation untouched.
