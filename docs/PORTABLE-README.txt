@@ -1,4 +1,4 @@
-TARKOV WORKBENCH 1.9.0.9
+TARKOV WORKBENCH 1.9.0.10
 Author: CA
 
 Handguard heat and cooling are shown beside attachment stats. Compatible
@@ -9,7 +9,7 @@ after upgrading an older saved snapshot to load these fields.
 
 Extract the entire ZIP to a new folder. Double-click Tarkov-Workbench.exe.
 Keep all extracted files and folders together; they are required.
-Close any older running instance first. The GUI header shows v1.9.0.9.
+Close any older running instance first. The GUI header shows v1.9.0.10.
 
 Windows 10/11 x64. No installation, browser, Node.js or account required.
 The root EXE starts the bundled Electron runtime directly. The application,

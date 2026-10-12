@@ -5,6 +5,8 @@ const { resolve, relative, isAbsolute, extname, join } = require('node:path');
 const { pathToFileURL } = require('node:url');
 
 app.setName('Tarkov Workbench');
+// Local trial packages use a separate profile and never replace stable settings.
+if(require('../package.json').rigPreview===true){const profile=join(app.getPath('appData'),require('../package.json').gearPreview===true?'Tarkov Workbench Gear Preview':'Tarkov Workbench Rig Preview');require('node:fs').mkdirSync(profile,{recursive:true});app.setPath('userData',profile);}
 protocol.registerSchemesAsPrivileged([{ scheme: 'workbench', privileges: {
   standard: true, secure: true, supportFetchAPI: true, corsEnabled: true, allowServiceWorkers: true
 } }]);

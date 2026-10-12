@@ -10,6 +10,7 @@ import {MAGAZINE_MINIMUMS,normalizeMagazineMinimum,magazineMinimumLabel} from '.
 import {setupSettings} from './settings-ui.mjs';
 import {defaultTraderSettings,normalizeTraderSettings,offerLabel,buildCost,TRADERS} from './traders.mjs';
 import {ENGINE_VERSION,validateBuild} from './optimizer.mjs';
+import {setupRigComparison} from './rig-ui.mjs';
 import {setupCategoryComparison} from './category-ui.mjs';
 import {profileFingerprint,transferIsCurrent} from './category-transfer.mjs';
 import {createShoppingList,formatShoppingList} from './shopping-list.mjs';
@@ -24,9 +25,12 @@ import {findAlternatives,applyAlternative,alternativeWeightLabel} from './altern
 import {arenaUnlock,isAvailable,availabilityLabel,AVAILABILITY_REVIEWED} from './availability.mjs';
 const $=id=>document.getElementById(id);
 let categoryComparison=null;
+let rigComparison=null;
+let backpackComparison=null;
 let switchWorkbenchTab=null;
 let categoryTransferToken=0;
 let categoryTransferInFlight=false;
+let builderNavigationGeneration=0;
 function ensureCategoryShell(){
   const workspace=document.querySelector('.workspace');
   if(!workspace||document.getElementById('workbench-tabs'))return;
@@ -34,22 +38,30 @@ function ensureCategoryShell(){
   const tabs=document.createElement('nav');tabs.id='workbench-tabs';tabs.className='workbench-tabs';tabs.setAttribute('aria-label','Workbench mode');tabs.setAttribute('role','tablist');
   const builderTab=document.createElement('button');builderTab.type='button';builderTab.dataset.workbenchTab='weapon';builderTab.id='workbench-tab-weapon';builderTab.setAttribute('role','tab');builderTab.setAttribute('aria-selected','true');builderTab.setAttribute('aria-controls','weapon-builder-panel');builderTab.textContent='Weapon builder';
   const categoryTab=document.createElement('button');categoryTab.type='button';categoryTab.dataset.workbenchTab='category';categoryTab.id='workbench-tab-category';categoryTab.setAttribute('role','tab');categoryTab.setAttribute('aria-selected','false');categoryTab.setAttribute('aria-controls','category-builder-panel');categoryTab.textContent='Best in category';
-  tabs.append(builderTab,categoryTab);workspace.before(tabs);
+  const rigStylesheet=document.createElement('link');rigStylesheet.rel='stylesheet';rigStylesheet.href='rigs.css';document.head.append(rigStylesheet);
+  const rigTab=document.createElement('button');rigTab.type='button';rigTab.dataset.workbenchTab='rigs';rigTab.id='workbench-tab-rigs';rigTab.setAttribute('role','tab');rigTab.setAttribute('aria-selected','false');rigTab.setAttribute('aria-controls','rig-builder-panel');rigTab.textContent='Tactical rigs';
+  const bagTab=document.createElement('button');bagTab.type='button';bagTab.dataset.workbenchTab='backpacks';bagTab.id='workbench-tab-backpacks';bagTab.setAttribute('role','tab');bagTab.setAttribute('aria-selected','false');bagTab.setAttribute('aria-controls','bag-builder-panel');bagTab.textContent='Backpacks';
+  tabs.append(builderTab,categoryTab,rigTab,bagTab);workspace.before(tabs);
   const builderPanel=document.createElement('div');builderPanel.id='weapon-builder-panel';builderPanel.dataset.workbenchPanel='weapon';builderPanel.setAttribute('role','tabpanel');builderPanel.setAttribute('aria-labelledby','workbench-tab-weapon');workspace.replaceWith(builderPanel);builderPanel.append(workspace);
   const categoryPanel=document.createElement('section');categoryPanel.id='category-builder-panel';categoryPanel.dataset.workbenchPanel='category';categoryPanel.setAttribute('role','tabpanel');categoryPanel.setAttribute('aria-labelledby','workbench-tab-category');categoryPanel.hidden=true;builderPanel.after(categoryPanel);
+  const rigPanel=document.createElement('section');rigPanel.id='rig-builder-panel';rigPanel.dataset.workbenchPanel='rigs';rigPanel.setAttribute('role','tabpanel');rigPanel.setAttribute('aria-labelledby','workbench-tab-rigs');rigPanel.hidden=true;categoryPanel.after(rigPanel);
+  const bagPanel=document.createElement('section');bagPanel.id='bag-builder-panel';bagPanel.dataset.workbenchPanel='backpacks';bagPanel.setAttribute('role','tabpanel');bagPanel.setAttribute('aria-labelledby','workbench-tab-backpacks');bagPanel.hidden=true;rigPanel.after(bagPanel);
   switchWorkbenchTab=function(tab){
-    const category=tab==='category';
-    builderPanel.hidden=category;categoryPanel.hidden=!category;
-    builderTab.setAttribute('aria-selected',String(!category));categoryTab.setAttribute('aria-selected',String(category));
-    if(category&&state.running)cancel();
-    if(!category&&categoryComparison?.isRunning())categoryComparison.cancel();
+    if(!['weapon','category','rigs','backpacks'].includes(tab))return;
+    document.querySelector('main').dataset.workbenchMode=tab;
+    document.querySelector('.intro h1').textContent=tab==='rigs'?'Find your ideal chest rig.':tab==='backpacks'?'Find your ideal backpack.':'Your weapon. At its best.';
+    for(const [key,panel,button] of [['weapon',builderPanel,builderTab],['category',categoryPanel,categoryTab],['rigs',rigPanel,rigTab],['backpacks',bagPanel,bagTab]]){
+      panel.hidden=key!==tab;button.setAttribute('aria-selected',String(key===tab));button.tabIndex=key===tab?0:-1;
+    }
+    if(tab!=='weapon'){builderNavigationGeneration++;if(state.running)cancel();}
+    if(tab!=='category'&&categoryComparison?.isRunning())categoryComparison.cancel();
   };
   tabs.addEventListener('click',event=>{
     const button=event.target.closest('[data-workbench-tab]');
     if(button)switchWorkbenchTab(button.dataset.workbenchTab);
   });
   tabs.addEventListener('keydown',event=>{
-    const buttons=[builderTab,categoryTab];
+    const buttons=[builderTab,categoryTab,rigTab,bagTab];
     const current=buttons.indexOf(event.target);
     if(current<0)return;
     let next=current;
@@ -91,6 +103,8 @@ function notice(message,error=false){$('result-status').textContent=message;$('r
 const imageURL=path=>state.imageURLs.get(path)??path;
 function options(){return {weaponId:$('weapon').value,mode:state.mode,sound:state.sound,balance:Number($('balance').value),magazine:state.magazineId?1:Number($('magazine').value),magazineId:state.magazineId,scopeId:state.scopeId,maxBudget:$('budget-enabled').checked?Number($('budget-amount').value):null,allowGrenadeLaunchers:$('allow-launchers').checked,...state.traderSettings,excludeArenaUnlocks:$('exclude-arena').checked,preferPracticalMounts:$('practical-mounts').checked,preferLighterParts:$('prefer-lighter').checked};}
 const notifyUser=setupFeedback();
+rigComparison=setupRigComparison({getCatalog:()=>state.catalog,imageURL,getSettings:()=>state.traderSettings});
+backpackComparison=setupRigComparison({getCatalog:()=>state.catalog,imageURL,kind:'backpacks',getSettings:()=>state.traderSettings});
 categoryComparison=setupCategoryComparison({getCatalog:()=>state.catalog,getSharedOptions:options,imageURL,notify:notifyUser,onOpenBuild:openCategoryBuild});
 const variantSelection=setupVariantSelection({getCatalog:()=>state.catalog,getOptions:options,getSound:()=>state.sound,notify:notifyUser,onSoundChange:sound=>{if(state.sound!==sound){state.sound=sound;invalidate();}}});
 function validateSelection(){
@@ -197,7 +211,10 @@ function weaponChanged(){
 function setMode(mode){state.mode=mode;document.querySelectorAll('[data-mode]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.mode===mode)));$('balance-field').hidden=mode!=='balanced';invalidate();}
 async function setSound(sound){return variantSelection.select(sound);}
 function busy(value){state.running=value;$('calculate').disabled=value||!$('weapon').value||state.updating;$('cancel').hidden=!value;$('calculate').firstChild.textContent=value?'Calculating build … ':'Calculate build ';}
-function cancel(){state.run++;state.worker?.terminate();state.worker=null;state.cancelCurrent?.();state.cancelCurrent=null;busy(false);notice('Calculation cancelled. Change your selection or try again.');}
+function cancel(){state.run++;state.worker?.terminate();state.worker=null;state.cancelCurrent?.();state.cancelCurrent=null;busy(false);state.result=null;$('stats').hidden=true;$('copy').disabled=true;
+  $('parts').replaceChildren(element('div','empty','Calculation cancelled. Your selections have been kept. Select Calculate build to try again.'));
+  $('build-caption').textContent='No build was generated. Your selections have been kept.';
+  notice('Calculation cancelled. Change your selection or try again.');}
 async function openCategoryBuild(entry){
   if(categoryTransferInFlight)return false;
   if(!entry?.selection||!entry.result||!state.catalog)return false;
@@ -353,11 +370,11 @@ function render(result,selection){
 async function calculate(){
   if(!state.catalog||state.running||state.updating||!$('weapon').value)return;
   if(!validateSelection())return;
-  const weaponId=$('weapon').value;
+  const weaponId=$('weapon').value,navigationGeneration=builderNavigationGeneration;
   await renderSuppressorSelection();
-  if(weaponId!==$('weapon').value||state.running||state.updating||!validateSelection())return;
+  if(navigationGeneration!==builderNavigationGeneration||weaponId!==$('weapon').value||state.running||state.updating||!validateSelection())return;
   if(!await setSound(state.sound))return;
-  if(weaponId!==$('weapon').value||state.running||state.updating)return;
+  if(navigationGeneration!==builderNavigationGeneration||weaponId!==$('weapon').value||state.running||state.updating)return;
   const selection=options(),run=++state.run;busy(true);$('build-section').hidden=false;$('welcome-guide').hidden=true;state.result=null;$('stats').hidden=true;$('copy').disabled=true;
   $('parts').replaceChildren(element('div','empty','Calculating compatible attachment chains …'));
   notice('Preparing your build. You can continue using the interface during calculation.');
@@ -453,6 +470,7 @@ async function activateDatabase(snapshot){
   for(const url of state.imageURLs.values())URL.revokeObjectURL(url);
   state.imageURLs=new Map(snapshot.images.map(image=>[image.path,URL.createObjectURL(image.blob)]));
   await storage.prepareSnapshot(state.catalog.meta.version,ENGINE_VERSION);
+  rigComparison?.refresh();backpackComparison?.refresh();
   state.weapons=moddableWeapons(state.catalog).filter(item=>isAvailable(item,{...options(),restrictTraders:false}));
   if(state.picker){state.picker.setItems(state.weapons,state.catalog.meta.weaponCount-state.weapons.length);state.picker.select(state.weapons.some(item=>item.id===selected)?selected:null);}
   else state.picker=createWeaponPicker({root:$('weapon-picker'),items:state.weapons,hiddenCount:state.catalog.meta.weaponCount-state.weapons.length,onSelect:weaponChanged,imageURL});
@@ -485,9 +503,9 @@ async function init(){
     else{$('data-status').textContent='No local database yet · setup required';notice('Download game data to start using the workbench. Nothing is downloaded without your approval.');}
     if(loaded.warning)$('update-status').textContent=loaded.warning;
     let ready=false;
-    async function readyOnce(){if(ready)return;ready=true;webMCP();setupSettings({settings:state.traderSettings,theme:savedTheme,firstRun:!(await storage.get('settings:setupComplete')),onSave:next=>{const changed=JSON.stringify(state.traderSettings)!==JSON.stringify(next);state.traderSettings=next;traderSummary();categoryComparison?.refresh();if(changed)refreshAvailability();}});}
+    async function readyOnce(){if(ready)return;ready=true;webMCP();setupSettings({settings:state.traderSettings,theme:savedTheme,firstRun:!(await storage.get('settings:setupComplete')),onSave:next=>{const changed=JSON.stringify(state.traderSettings)!==JSON.stringify(next);state.traderSettings=next;traderSummary();categoryComparison?.refresh();rigComparison?.refresh();backpackComparison?.refresh();if(changed)refreshAvailability();}});}
     const updates=setupDatabaseUpdates({getSnapshot:()=>state.snapshot,getBundled:()=>state.bundled,activate:activateDatabase,onReady:readyOnce,setBusy:value=>{
-      if(value&&state.running)cancel();state.updating=value;categoryComparison?.setUpdating(value);
+      if(value&&state.running)cancel();state.updating=value;categoryComparison?.setUpdating(value);rigComparison?.setUpdating(value);backpackComparison?.setUpdating(value);
       document.querySelector('.controls').inert=value;
       $('calculate').disabled=value||state.running||!$('weapon').value;$('scope-change').disabled=value||!$('weapon').value;$('magazine-change').disabled=value||!$('weapon').value;$('settings-open').disabled=value||!state.catalog;
     }});

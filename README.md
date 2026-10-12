@@ -4,9 +4,9 @@
 
 An open-source Escape from Tarkov weapon builder for Windows. Choose how you want a weapon to perform, and Tarkov Workbench assembles a compatible build from locally saved community data.
 
-## New in 1.9.0.9
+## New in 1.9.0.10
 
-Added **Best in category** to compare complete weapon builds by category, caliber and build goal. Open any result in the regular builder with its attachments already selected. Improved tab feedback and button readability across themes, and fixed a Windows program update issue.
+Added **Tactical rigs** and **Backpacks** with pocket layouts, search, filters and trader, barter and Flea Market prices. Improved budget validation, cancellation and trader pricing.
 
 ## Download
 
@@ -26,6 +26,7 @@ The desktop app opens in its own window; it does not need a browser, an account 
 
 - **Three build goals:** **Ergo** prioritizes the highest ergonomics, **Recoil** the lowest recoil, and **Balanced** the lowest recoil while aiming for your Ergo target. Suppressed and unsuppressed builds are offered where the weapon supports them.
 - **Best in category:** compare complete builds across a weapon category, optionally narrow by caliber, and open a ranked result in the regular builder. Your availability rules and attachment budget apply. Unavailable and unproven builds are explained separately; the ranking compares recorded stats rather than simulated firing behavior. See [category comparison](docs/CATEGORY-COMPARISON.md).
+- **Tactical rigs and Backpacks:** compare pocket layouts, storage capacity, weight and efficiency. Inspect armour coverage and plates for armoured rigs, and view trader, barter and Flea Market offers. See [gear comparison](docs/GEAR-COMPARISON.md).
 - **Compatibility-aware assembly:** the optimizer checks required parts, mounting chains, blocked slots and conflicting attachments before showing a build. A selected scope or magazine stays selected throughout optimization.
 - **Your availability rules:** set trader loyalty levels, include or exclude barter, quest and Flea Market purchases, and filter Arena unlocks you do not own. Quest, barter and Flea Market offers are included by default; known Arena unlocks are excluded. Factory parts are treated as already owned. Saved purchase prices are shown where available.
 - **Practical choices:** ordinary, low-profile scope mounts are preferred when they stay close to the best achievable stats. Underbarrel launchers are off by default. Equivalent alternatives are offered only when the complete build remains compatible; equal-performing choices favor lower weight before price by default; turn off **Prefer lighter parts** to keep included factory parts and choose the cheaper part instead.
@@ -48,6 +49,8 @@ The desktop app opens in its own window; it does not need a browser, an account 
 ![Scope picker with compatible pictured sights](docs/screenshots/scope-picker.png)
 
 ![Attachment list with prices and alternatives](docs/screenshots/attachment-list.png)
+
+Open **Tactical rigs** or **Backpacks** to compare storage layouts. Search by name, narrow the filters and click a column heading to sort. Select an item for its pocket layout, detailed stats and purchase offers. Gear uses the same saved database and availability settings as the weapon builder.
 
 The weapon image is a reference preset, not a 3D rendering of the calculated build. Results depend on the completeness and accuracy of the community data; game patches can arrive before that data is updated. Character skills, ammunition, durability, folded stocks and situational bonuses are outside the calculation.
 
@@ -73,7 +76,7 @@ npm test
 npm run portable:online
 ```
 
-The last command creates `Tarkov-Workbench-Online-Portable.zip` and `Online-Portable/` without bundling downloaded item data or images. For local browser development or an offline snapshot build, follow [source setup](docs/SOURCE-SETUP.md). Additional details: [traders and loadout](docs/TRADERS-AND-LOADOUT.md), [practical mounts](docs/PRACTICAL-MOUNTS.md), [availability rules](docs/AVAILABILITY.md), and [distribution](docs/DISTRIBUTION.md).
+Run the tests after synchronizing local development data as described in [source setup](docs/SOURCE-SETUP.md). The last command creates `Tarkov-Workbench-Online-Portable.zip` and `Online-Portable/` without bundling downloaded item data or images. For local browser development or an offline snapshot build, follow [source setup](docs/SOURCE-SETUP.md). Additional details: [traders and loadout](docs/TRADERS-AND-LOADOUT.md), [practical mounts](docs/PRACTICAL-MOUNTS.md), [availability rules](docs/AVAILABILITY.md), and [distribution](docs/DISTRIBUTION.md).
 
 ## Sources and license
 

@@ -144,6 +144,7 @@ export function setupCategoryComparison({
   }
 
   function renderEmpty(message = 'Choose options and find validated builds when you are ready.') {
+    query('[data-category-results-title]').textContent = currentChoice() ? 'Compare ' + currentChoice().label.split(' · ')[0] + ' builds' : 'Choose a category';
     query('[data-category-table-wrap]').hidden = true;
     query('[data-category-empty]').hidden = false;
     query('[data-category-detail]').hidden = true;
@@ -182,7 +183,7 @@ export function setupCategoryComparison({
     lighter.checked = options.preferLighterParts !== false;
     launchers.checked = options.allowGrenadeLaunchers === true;
     budget.checked = options.maxBudget !== null && options.maxBudget !== undefined;
-    if (options.maxBudget !== null && options.maxBudget !== undefined) amount.value = String(options.maxBudget);
+    if (options.maxBudget !== null && options.maxBudget !== undefined && document.activeElement !== amount) amount.value = String(options.maxBudget);
     query('[data-category-budget-entry]').hidden = !budget.checked;
     const summary = [];
     summary.push(options.restrictTraders === false ? 'Trader limits off' : 'Trader levels applied');
@@ -443,6 +444,9 @@ export function setupCategoryComparison({
     state.running = true;
     state.result = null;
     state.selectedWeaponId = null;
+    query('[data-category-results-title]').textContent = 'Comparing ' + (currentChoice()?.label ?? 'category').split(' · ')[0] + ' builds';
+    query('[data-category-results-meta]').textContent = 'Checking candidates with the current options.';
+    query('[data-category-sort-note]').hidden = true;
     query('[data-category-empty]').hidden = false;
     query('[data-category-empty]').replaceChildren(createElement('h3', null, 'Checking complete builds …'), createElement('p', null, 'Each weapon is validated with the current compatibility, availability and budget rules.'));
     query('[data-category-detail]').hidden = true;
@@ -523,6 +527,11 @@ export function setupCategoryComparison({
   });
 
   root.addEventListener('input', event => {
+    if (event.target instanceof HTMLInputElement && event.target.dataset.categorySetting === 'budget-amount') {
+      // Synchronize the raw entry before a rerender can restore the prior shared value.
+      syncExistingSetting('budget-amount', event.target.value);
+      return;
+    }
     if (event.target instanceof HTMLInputElement && event.target.matches('[data-category-target]')) {
       state.balance = Number(event.target.value);
       renderControls();

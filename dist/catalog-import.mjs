@@ -1,4 +1,7 @@
 // Author: CA
+import {importRigs} from './rigs.mjs';
+import {importBackpacks} from './backpacks.mjs';
+import {importGearOffers} from './gear-offers.mjs';
 import {isOptic,classifyOpticMounts} from './optics.mjs';
 import {validateSource,validateCatalog} from './data-validation.mjs';
 import {importBarters,BARTERS_URL} from './barters.mjs';
@@ -63,9 +66,12 @@ for(const weapon of Object.values(items).filter(item=>item.types.includes('gun')
   }
   weapon.factoryParts=parts;
 }
-const digest=await crypto.subtle.digest('SHA-256',new TextEncoder().encode('catalog-v9-thermal-handguards'+JSON.stringify(overrides)+raw.text+names.text+barters.text));
+const digest=await crypto.subtle.digest('SHA-256',new TextEncoder().encode('catalog-v11-rigs-backpacks-prices'+JSON.stringify(overrides)+raw.text+names.text+barters.text));
 const version=Array.from(new Uint8Array(digest),b=>b.toString(16).padStart(2,'0')).join('').slice(0,16);
-const data = { meta: { schemaVersion:1, version, fetchedAt: raw.fetchedAt, sourceModified: raw.modified, source: base, localeSource: `${base}_en`, gameMode: 'regular', weaponCount: Object.values(items).filter(i => i.types.includes('gun')).length, modCount: Object.values(items).filter(i => !i.types.includes('gun')).length }, items };
+const rigData=importRigs(source,locale);
+const backpackData=importBackpacks(source,locale);
+importGearOffers(source,locale,{...rigData.rigs,...backpackData.backpacks},barters);
+const data = { ...rigData, ...backpackData, meta: { schemaVersion:1, version, fetchedAt: raw.fetchedAt, sourceModified: raw.modified, source: base, localeSource: `${base}_en`, gameMode: 'regular', rigCount: Object.keys(rigData.rigs).length, backpackCount: Object.keys(backpackData.backpacks).length, weaponCount: Object.values(items).filter(i => i.types.includes('gun')).length, modCount: Object.values(items).filter(i => !i.types.includes('gun')).length }, items };
 validateCatalog(data);
 data.meta.barterSource=BARTERS_URL;data.meta.barterFetchedAt=barters.fetchedAt??raw.fetchedAt;data.meta.barterCount=barterCount;
 return data;

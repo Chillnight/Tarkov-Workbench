@@ -47,6 +47,7 @@ Copy-Item -LiteralPath (Join-Path $projectRoot 'docs\AVAILABILITY.md') -Destinat
 Copy-Item -LiteralPath (Join-Path $projectRoot 'docs\PRACTICAL-MOUNTS.md') -Destination $docsPath
 Copy-Item -LiteralPath (Join-Path $projectRoot 'docs\TRADERS-AND-LOADOUT.md') -Destination $docsPath
 Copy-Item -LiteralPath (Join-Path $projectRoot 'docs\CATEGORY-COMPARISON.md') -Destination $docsPath
+Copy-Item -LiteralPath (Join-Path $projectRoot 'docs\GEAR-COMPARISON.md') -Destination $docsPath
 Copy-Item -LiteralPath (Join-Path $projectRoot 'dist\vendor\HIGHS-LICENSE.txt') -Destination $docsPath
 Copy-Item -LiteralPath (Join-Path $projectRoot 'LICENSE') -Destination (Join-Path $stagePath 'LICENSE.txt')
 $stagedArchive = Join-Path $releasePath $archiveName

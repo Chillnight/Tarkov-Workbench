@@ -21,7 +21,7 @@ export async function download(url,{signal,maxBytes,fetcher=fetch}){
 }
 
 export function imageJobs(catalog){
-  return Object.values(catalog.items).flatMap(item=>[{path:item.icon,source:item.iconSource},...(item.image?[{path:item.image,source:item.imageSource}]:[])]);
+  return [...Object.values(catalog.items),...Object.values(catalog.rigs??{}),...Object.values(catalog.backpacks??{})].flatMap(item=>[{path:item.icon,source:item.iconSource},...(item.image?[{path:item.image,source:item.imageSource}]:[])]);
 }
 
 export function imageType(bytes){

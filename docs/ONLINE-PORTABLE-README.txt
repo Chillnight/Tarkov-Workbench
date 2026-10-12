@@ -1,4 +1,4 @@
-TARKOV WORKBENCH 1.9.0.9 - ONLINE SETUP EDITION
+TARKOV WORKBENCH 1.9.0.10 - ONLINE SETUP EDITION
 Author: CA
 
 Keep this whole folder together. Start Tarkov-Workbench.exe in this folder.
@@ -34,7 +34,7 @@ Escape from Tarkov and its item images belong to Battlestate Games or
 their respective rights holders. Independent community tool, not operated
 by Battlestate Games. Electron and Chromium licenses are in this folder.
 
-Version 1.9.0.6 checks complete suppressor assemblies and explains unavailable
+The builder checks complete suppressor assemblies and explains unavailable
 variants in a popup. Invalid budgets also show a popup. Scope and magazine
 lists refresh when the budget changes. Equivalent leaf choices are reduced
 before optimization without changing performance or compatibility priorities.
@@ -48,6 +48,14 @@ Optionally narrow by caliber, choose an objective and suppressor mode,
 then Find best weapons. Shared availability and attachment budget rules
 apply. Open a selected result in the regular builder to inspect its parts.
 See CATEGORY-COMPARISON.md for ranking rules and comparison limitations.
+
+TACTICAL RIGS AND BACKPACKS
+Compare pocket layouts, storage capacity, weight and purchase options in
+the Tactical rigs and Backpacks tabs. Search, filter or sort the table,
+then select an item to see details. Armoured rigs include armour coverage
+and plate information. Trader, barter and Flea Market offers use saved
+data and your availability settings. See GEAR-COMPARISON.md for details.
+Use Update database after upgrading to download the gear data and images.
 
 HANDGUARD HEAT AND COOLING
 At equal Ergo/recoil, compatible handguard replacements may be preferred

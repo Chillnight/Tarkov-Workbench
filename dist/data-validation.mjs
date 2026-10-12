@@ -1,4 +1,6 @@
 // Author: CA
+import {validateRigData} from './rigs.mjs';
+import {validateBackpackData} from './backpacks.mjs';
 const idPattern=/^[a-f0-9]{24}$/;
 const imagePattern=/^images\/[a-f0-9]{24}(?:-reference)?\.webp$/;
 const fail=message=>{throw new Error(`Data validation failed: ${message}`);};
@@ -58,5 +60,10 @@ export function validateCatalog(catalog,previous){
     active.delete(id);visited.add(id);
   }
   for(const item of all)visit(item.id);
+  validateRigData(catalog,validateImageSource);
+  validateBackpackData(catalog,validateImageSource);
+  if(previous?.backpacks&&Object.keys(catalog.backpacks??{}).length<Object.keys(previous.backpacks).length*.9)fail('more than 10% of backpacks are missing');
+  for(const collection of ['rigs','backpacks'])if(previous?.[collection]&&Object.values(previous[collection]).some(i=>i.offers!==undefined)&&Object.values(catalog[collection]??{}).some(i=>i.offers===undefined))fail('gear purchase offers are missing');
+  if(previous?.rigs&&Object.keys(catalog.rigs??{}).length<Object.keys(previous.rigs).length*.9)fail('more than 10% of rigs are missing');
   return catalog;
 }

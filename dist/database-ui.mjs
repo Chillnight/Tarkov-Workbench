@@ -40,7 +40,7 @@ export function setupDatabaseUpdates({getSnapshot,getBundled,activate,setBusy,on
     $('update-image-detail').textContent=initial?'All required item images, saved locally for offline use.':'Missing or changed item images, saved for offline use.';
     $('update-size-hint').textContent=initial?'The initial download includes all required images (currently around 20 MB) and the item exports (roughly 20 MB before compression). No account is required. Nothing downloads until you choose Download data.':'Item exports are roughly 20 MB before compression, plus any new images. No account is required. This is a manual download, not permission for background updates. Community data may lag behind an EFT patch.';
     $('update-preserve-hint').textContent=initial?'The workbench remains empty if you stay offline or the download fails. A successful download is validated and saved on this PC for later offline use.':'The current database stays active until the new data has been validated and saved. Cached build results are cleared after a data change.';
-    $('update-progress').textContent='No internet request is made until you choose “Download data”.';
+    $('update-progress').textContent=`No internet request is made until you choose “${initial?'Download data':'Download update'}”.`;
     $('update-download').textContent=initial?'Download data':'Download update';
     $('update-download').hidden=false;$('update-download').disabled=false;
     $('update-dismiss').disabled=false;$('update-dismiss').textContent='Stay offline';

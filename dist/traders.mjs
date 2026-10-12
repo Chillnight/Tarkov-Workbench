@@ -19,7 +19,7 @@ export function normalizeTraderSettings(value){
     includeQuestOffers:value?.includeQuestOffers!==false,includeBarters:value?.includeBarters!==false,includeFleaMarket:value?.includeFleaMarket!==false,
     traderLevels:Object.fromEntries(TRADERS.map(t=>[t.id,Number.isInteger(value?.traderLevels?.[t.id])&&value.traderLevels[t.id]>=0&&value.traderLevels[t.id]<=4?value.traderLevels[t.id]:1]))};
 }
-const unlocked=(offer,options)=>(options.traderLevels?.[offer.trader]??(options.restrictTraders?1:4))>=offer.minTraderLevel&&(!offer.taskUnlock||options.includeQuestOffers!==false);
+const unlocked=(offer,options)=>(options.restrictTraders===false||(options.traderLevels?.[offer.trader]??(options.restrictTraders?1:4))>=offer.minTraderLevel)&&(!offer.taskUnlock||options.includeQuestOffers!==false);
 const value=offer=>Number.isFinite(offer.priceRUB)&&offer.priceRUB>0?offer.priceRUB:Infinity;
 export function eligibleOffers(item,options={}){
   const market=fleaOffer(item,options),rank=o=>o.kind==='flea'?2:o.kind==='barter'?1:0;

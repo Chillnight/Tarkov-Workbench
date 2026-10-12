@@ -2,6 +2,10 @@
 
 Author: CA
 
+## Tactical rigs and Backpacks (1.9.0.10)
+
+The new gear tabs compare pocket layouts, capacity, weight and purchase offers. Use **Update database** after upgrading to retrieve the gear data and images. Your existing database and settings are retained. See [gear comparison](GEAR-COMPARISON.md) for details.
+
 ## Category comparison (1.9.0.9)
 
 The new **Best in category** tab compares complete builds for a selected weapon category and optional caliber. Comparisons start only when requested, honor current availability and attachment-spending settings, report skipped and unproven candidates, and can be cancelled. A selected complete result can be opened in the regular builder without recalculating. See [category comparison](CATEGORY-COMPARISON.md) for ranking rules and limitations. No new data download is required for this feature if a valid local database is already present.
