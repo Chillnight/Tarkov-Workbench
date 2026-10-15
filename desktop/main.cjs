@@ -14,6 +14,8 @@ const baseURL='workbench://app/';
 const mime={'.html':'text/html; charset=utf-8','.mjs':'text/javascript; charset=utf-8','.js':'text/javascript; charset=utf-8','.css':'text/css; charset=utf-8','.json':'application/json; charset=utf-8','.wasm':'application/wasm','.png':'image/png','.webp':'image/webp','.svg':'image/svg+xml','.txt':'text/plain; charset=utf-8'};
 const csp="default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; worker-src 'self'; style-src 'self'; img-src 'self' data: blob:; connect-src 'self' https://json.tarkov.dev https://assets.tarkov.dev https://api.github.com; object-src 'none'; base-uri 'none'; frame-src 'none'";
 let mainWindow;
+let nativeSolver;
+app.on('before-quit',()=>nativeSolver?.close());
 
 function openReference(url) {
   try {
@@ -28,12 +30,16 @@ else {
   app.on('second-instance',()=>{if(mainWindow){if(mainWindow.isMinimized())mainWindow.restore();mainWindow.show();mainWindow.focus();}});
   app.whenReady().then(async()=>{
     const root=join(app.getAppPath(),'dist');
+    const {createNativeService,nativeResponse}=await import(pathToFileURL(join(__dirname,'native-service.mjs')).href);
+    nativeSolver=createNativeService({executable:app.isPackaged?join(process.resourcesPath,'native-solver','highs.exe'):join(__dirname,'native-solver','highs.exe'),cpExecutable:app.isPackaged?join(process.resourcesPath,'cp-solver','sat_runner.exe'):join(__dirname,'cp-solver','sat_runner.exe')});
     const {imageResponse}=await import(pathToFileURL(join(__dirname,'image-download.mjs')).href);
     protocol.handle('workbench',async request=>{
       try{
         const url=new URL(request.url);
-        if(url.hostname!=='app'||request.method!=='GET')return new Response('Forbidden',{status:403});
+        if(url.hostname!=='app')return new Response('Forbidden',{status:403});
         const pathname=decodeURIComponent(url.pathname);
+        if(['/api/solver','/api/solve'].includes(pathname))return nativeResponse(request,nativeSolver);
+        if(request.method!=='GET')return new Response('Forbidden',{status:403});
         if(pathname==='/api/image')return imageResponse(url.searchParams.get('source'),request.signal);
         const file=resolve(root,'.'+(pathname==='/'?'/index.html':pathname));
         const rel=relative(root,file);

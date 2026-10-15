@@ -33,3 +33,7 @@ Tarkov-Workbench-Rig-Preview.zip
 Rig-Preview-Updated/
 
 Gear-Preview/
+
+# Native runtime files are verified and packaged as release resources.
+desktop/cp-solver/*.exe
+desktop/cp-solver/*.dll

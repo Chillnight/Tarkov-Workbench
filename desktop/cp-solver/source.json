@@ -1,0 +1,116 @@
+{
+  "engine": "OR-Tools CP-SAT",
+  "version": "9.15.6755",
+  "platform": "win32-x64",
+  "source": "https://github.com/google/or-tools/releases/download/v9.15/or-tools_x64_VisualStudio2022_cpp_v9.15.6755.zip",
+  "archiveSha256": "43429C741641C8B495EE77E44EA00F0F4524519495FD2EDAF929003AA2B2EA30",
+  "workers": 8,
+  "files": [
+    {
+      "name": "abseil_dll.dll",
+      "bytes": 2056192,
+      "sha256": "e4cb5a870db75b6393d77b7ba6d2fcdcd329724c88a34e354e735e6d73fc68b2"
+    },
+    {
+      "name": "bz2.dll",
+      "bytes": 77824,
+      "sha256": "a13f4e284fc8765325c6d773da05b77329825bf4bceeeb6d15b9b7ca51744f35"
+    },
+    {
+      "name": "concrt140.dll",
+      "bytes": 324208,
+      "sha256": "2405355f0a58067b258f8df33c327e3a3d716eaac5a3a5aebb757842d85bd376"
+    },
+    {
+      "name": "highs.dll",
+      "bytes": 8519168,
+      "sha256": "cded457f122300ba95a589b4e79fb21b27a8543bdb65694cc406fd8f1e4fa099"
+    },
+    {
+      "name": "libprotobuf.dll",
+      "bytes": 13574656,
+      "sha256": "ed09b2190e7b01c3e0b210099fc68f1d1bc8e8083a3d421be53997fee2387fb5"
+    },
+    {
+      "name": "libscip.dll",
+      "bytes": 12798976,
+      "sha256": "d51a51669512ee9bd573c79ae8b9d621a34f83db19574d37c08450da59e7b5f2"
+    },
+    {
+      "name": "libutf8_validity.dll",
+      "bytes": 10240,
+      "sha256": "afcecc3c7f40bc07a7f7fb3061e9aa9fc34edb6f4d1d238f8ecb8ca261be57c7"
+    },
+    {
+      "name": "msvcp140.dll",
+      "bytes": 557728,
+      "sha256": "0f885b509a685d2bbfa652fed26b5fb31d88fbdab0a978c641d1c7b8aa460aa9"
+    },
+    {
+      "name": "msvcp140_1.dll",
+      "bytes": 35952,
+      "sha256": "bfad5aef4c63a669e3c140655cdfdf395b6c979b400a447bd5dcb65ed8826c3d"
+    },
+    {
+      "name": "msvcp140_2.dll",
+      "bytes": 280200,
+      "sha256": "3ea06f0ee098b4823cb79599df3780e7f23cce52c19aac31d2a0d47efe33a5e9"
+    },
+    {
+      "name": "msvcp140_atomic_wait.dll",
+      "bytes": 50304,
+      "sha256": "640b2aefced484d0368eea5bdd06addd0658a3a70a49256e560d6923b404a479"
+    },
+    {
+      "name": "msvcp140_codecvt_ids.dll",
+      "bytes": 31872,
+      "sha256": "f2069a52880ec885ee7f0511186100eb7fada0411a2b4948fafea7735b878a18"
+    },
+    {
+      "name": "ortools.dll",
+      "bytes": 34522112,
+      "sha256": "5bf97be28319711d5262d04e97bdb15af3a0e5e9b6babf67e6c0a042d019e46f"
+    },
+    {
+      "name": "re2.dll",
+      "bytes": 1263104,
+      "sha256": "550954d1c1cf498854b0611b29bd8ddfe827785c0c333fd204de23d74d44df96"
+    },
+    {
+      "name": "sat_runner.exe",
+      "bytes": 245760,
+      "sha256": "e01be37cd49098aec7a60a993e812b298406a955408313600983abed10125b18"
+    },
+    {
+      "name": "vccorlib140.dll",
+      "bytes": 352384,
+      "sha256": "19839407c3fdbc824e5bce189bf68ddf8097f12ec28b757797ffa0415c144ddd"
+    },
+    {
+      "name": "vcruntime140.dll",
+      "bytes": 124544,
+      "sha256": "d5e4d9a3e835fa679450145d6a7d94e36573a509317111904d9b3712c30d9066"
+    },
+    {
+      "name": "vcruntime140_1.dll",
+      "bytes": 49792,
+      "sha256": "1f2d41c4aa5db0bc33ebf7b66d72943a817d7ce6cbe880502a9403823633093f"
+    },
+    {
+      "name": "vcruntime140_threads.dll",
+      "bytes": 38528,
+      "sha256": "219915cf20822f34d5e7c1fdd4e21ae7f3396881096c51036225fb8f84b47afa"
+    },
+    {
+      "name": "zlib1.dll",
+      "bytes": 90624,
+      "sha256": "bb69e0be9857093ba4f3b30f49fc720fe1f295c5cc0cb4030035c57906d0f7c3"
+    }
+  ],
+  "runtime": {
+    "provider": "Microsoft",
+    "version": "14.44.35211",
+    "origin": "Visual Studio 2022 x64 redistributable CRT",
+    "documentation": "https://learn.microsoft.com/en-us/cpp/windows/redistributing-visual-cpp-files"
+  }
+}

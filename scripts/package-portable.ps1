@@ -36,6 +36,15 @@ if (-not (Test-Path -LiteralPath (Join-Path $runtimePath 'Tarkov-Workbench.exe')
 Assert-ProjectPath $stagePath
 if (Test-Path -LiteralPath $stagePath) { Remove-Item -LiteralPath $stagePath -Recurse -Force }
 Copy-Item -LiteralPath $runtimePath -Destination $stagePath -Recurse
+# Verify native resources before creating or replacing a distribution.
+$nativeManifestPath = Join-Path $projectRoot 'desktop\cp-solver\source.json'
+$nativeManifest = Get-Content -LiteralPath $nativeManifestPath -Raw | ConvertFrom-Json
+foreach ($nativeFile in $nativeManifest.files) {
+    if ([IO.Path]::GetFileName($nativeFile.name) -ne $nativeFile.name) { throw 'Invalid native filename.' }
+    $nativeTarget = Join-Path (Join-Path $stagePath 'resources\cp-solver') $nativeFile.name
+    if (-not (Test-Path -LiteralPath $nativeTarget -PathType Leaf)) { throw "Missing native runtime: $($nativeFile.name)" }
+    if ((Get-Item -LiteralPath $nativeTarget).Length -ne $nativeFile.bytes -or (Get-FileHash -LiteralPath $nativeTarget -Algorithm SHA256).Hash -ne $nativeFile.sha256) { throw "Native runtime checksum mismatch: $($nativeFile.name)" }
+}
 $docsPath = Join-Path $stagePath 'docs'
 New-Item -ItemType Directory -Path $docsPath -Force | Out-Null
 $package = Get-Content -LiteralPath (Join-Path $projectRoot 'package.json') -Raw | ConvertFrom-Json
@@ -48,6 +57,7 @@ Copy-Item -LiteralPath (Join-Path $projectRoot 'docs\PRACTICAL-MOUNTS.md') -Dest
 Copy-Item -LiteralPath (Join-Path $projectRoot 'docs\TRADERS-AND-LOADOUT.md') -Destination $docsPath
 Copy-Item -LiteralPath (Join-Path $projectRoot 'docs\CATEGORY-COMPARISON.md') -Destination $docsPath
 Copy-Item -LiteralPath (Join-Path $projectRoot 'docs\GEAR-COMPARISON.md') -Destination $docsPath
+Copy-Item -LiteralPath (Join-Path $projectRoot 'docs\SOLVER-PERFORMANCE.md') -Destination $docsPath
 Copy-Item -LiteralPath (Join-Path $projectRoot 'dist\vendor\HIGHS-LICENSE.txt') -Destination $docsPath
 Copy-Item -LiteralPath (Join-Path $projectRoot 'LICENSE') -Destination (Join-Path $stagePath 'LICENSE.txt')
 $stagedArchive = Join-Path $releasePath $archiveName

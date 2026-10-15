@@ -1,4 +1,4 @@
-TARKOV WORKBENCH 1.9.0.10 - ONLINE SETUP EDITION
+TARKOV WORKBENCH 1.9.0.11 - ONLINE SETUP EDITION
 Author: CA
 
 Keep this whole folder together. Start Tarkov-Workbench.exe in this folder.
@@ -71,3 +71,8 @@ Confirm Download and restart to download and verify the complete app ZIP.
 Your database and settings in your user profile are kept. The app stays
 at the same location; old and temporary files are removed after success.
 See UPDATES.md for recovery and manual download instructions.
+
+PERFORMANCE
+Complex builds and attachment checks can use CP-SAT. Simpler cases keep
+HiGHS. Search filters are prioritized and completed compatibility checks
+are reused. Solver fallback, compatibility and purchase rules remain active.

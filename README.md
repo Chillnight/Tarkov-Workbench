@@ -4,9 +4,9 @@
 
 An open-source Escape from Tarkov weapon builder for Windows. Choose how you want a weapon to perform, and Tarkov Workbench assembles a compatible build from locally saved community data.
 
-## New in 1.9.0.10
+## New in 1.9.0.11
 
-Added **Tactical rigs** and **Backpacks** with pocket layouts, search, filters and trader, barter and Flea Market prices. Improved budget validation, cancellation and trader pricing.
+Added CP-SAT acceleration for complex weapon builds, category comparisons, and scope and magazine checks. Simpler cases keep HiGHS. Attachment searches prioritize your filters and reuse completed checks, with automatic solver fallback.
 
 ## Download
 
@@ -31,6 +31,7 @@ The desktop app opens in its own window; it does not need a browser, an account 
 - **Your availability rules:** set trader loyalty levels, include or exclude barter, quest and Flea Market purchases, and filter Arena unlocks you do not own. Quest, barter and Flea Market offers are included by default; known Arena unlocks are excluded. Factory parts are treated as already owned. Saved purchase prices are shown where available.
 - **Practical choices:** ordinary, low-profile scope mounts are preferred when they stay close to the best achievable stats. Underbarrel launchers are off by default. Equivalent alternatives are offered only when the complete build remains compatible; equal-performing choices favor lower weight before price by default; turn off **Prefer lighter parts** to keep included factory parts and choose the cheaper part instead.
 - **Handguard heat and cooling:** at equal Ergo and recoil, compatible handguard replacements with better thermal values are preferred when neither heat nor cooling worsens. Installed attachments and other recorded performance stats are preserved. Both thermal values must be supplied; missing data is shown as unknown. Alternatives display the differences so you can choose a tradeoff yourself.
+- **Automatic solver selection:** complex calculations can use CP-SAT, while simpler cases retain HiGHS. Attachment searches prioritize your filters and reuse completed compatibility checks. See [solver selection](docs/SOLVER-PERFORMANCE.md).
 - **Readable result:** see ergonomics, recoil, weight, estimated attachment cost and a pictured parts list with short and full names, assembly paths and compatibility details.
 - **Plan a purchase:** expand the shopping list to see required attachments grouped by vendor, with cash offers, barter ingredients, Flea Market estimates and a copy button. Optionally set a maximum attachment budget in RUB; additional parts without a known value are excluded while the limit is on.
 - **Choose your colors:** keep the original green interface or switch to Steel blue, Bourbon or Graphite in Settings.
@@ -72,14 +73,15 @@ The repository contains the application, tests and packaging scripts. Downloaded
 
 ```text
 npm ci
+npm run prepare:solvers -- C:\Tools\TarkovWorkbench\resources\cp-solver
 npm test
 npm run portable:online
 ```
 
-Run the tests after synchronizing local development data as described in [source setup](docs/SOURCE-SETUP.md). The last command creates `Tarkov-Workbench-Online-Portable.zip` and `Online-Portable/` without bundling downloaded item data or images. For local browser development or an offline snapshot build, follow [source setup](docs/SOURCE-SETUP.md). Additional details: [traders and loadout](docs/TRADERS-AND-LOADOUT.md), [practical mounts](docs/PRACTICAL-MOUNTS.md), [availability rules](docs/AVAILABILITY.md), and [distribution](docs/DISTRIBUTION.md).
+Copy the pinned native runtime from an extracted 1.9.0.11 or newer portable release using the prepare command above; adjust the example path to your folder. Run the tests after synchronizing local development data as described in [source setup](docs/SOURCE-SETUP.md). The last command creates `Tarkov-Workbench-Online-Portable.zip` and `Online-Portable/` without bundling downloaded item data or images. For local browser development or an offline snapshot build, follow [source setup](docs/SOURCE-SETUP.md). Additional details: [traders and loadout](docs/TRADERS-AND-LOADOUT.md), [practical mounts](docs/PRACTICAL-MOUNTS.md), [availability rules](docs/AVAILABILITY.md), and [distribution](docs/DISTRIBUTION.md).
 
 ## Sources and license
 
-Weapon and item data comes from the community-maintained [tarkov.dev data project](https://github.com/the-hideout/tarkov-data-manager); the app's download flow uses the [tarkov.dev API and exports](https://tarkov.dev/api/). The [Escape from Tarkov Wiki](https://escapefromtarkov.fandom.com/wiki/Escape_from_Tarkov_Wiki) is a reference for manual compatibility checks. Optimization uses [HiGHS](https://github.com/lovasoa/highs-js); the desktop runtime uses [Electron](https://www.electronjs.org/). Their license notices are preserved in the source or packaged app.
+Weapon and item data comes from the community-maintained [tarkov.dev data project](https://github.com/the-hideout/tarkov-data-manager); the app's download flow uses the [tarkov.dev API and exports](https://tarkov.dev/api/). The [Escape from Tarkov Wiki](https://escapefromtarkov.fandom.com/wiki/Escape_from_Tarkov_Wiki) is a reference for manual compatibility checks. Optimization uses [OR-Tools CP-SAT](https://github.com/google/or-tools), [HiGHS](https://github.com/ERGO-Code/HiGHS) and its [WebAssembly wrapper](https://github.com/lovasoa/highs-js); the desktop runtime uses [Electron](https://www.electronjs.org/). Their license notices are preserved in the source or packaged app.
 
 Our own source code is licensed under [MIT](LICENSE). This license does not cover Escape from Tarkov game content, item images, names or trademarks, or override third-party licenses. Tarkov Workbench is an independent community tool and is not operated by Battlestate Games.

@@ -2,6 +2,10 @@
 
 Author: CA
 
+## Adaptive solver selection (1.9.0.11)
+
+Complex weapon builds, category comparisons and attachment checks can use CP-SAT. Simpler cases keep HiGHS. Attachment searches prioritize active filters and reuse completed compatibility checks, with automatic solver fallback. Existing compatibility, availability and budget rules remain active.
+
 ## Tactical rigs and Backpacks (1.9.0.10)
 
 The new gear tabs compare pocket layouts, capacity, weight and purchase offers. Use **Update database** after upgrading to retrieve the gear data and images. Your existing database and settings are retained. See [gear comparison](GEAR-COMPARISON.md) for details.

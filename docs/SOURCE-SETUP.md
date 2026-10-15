@@ -8,6 +8,7 @@ On Windows, with Node.js and npm installed, run from the repository root:
 
 ```text
 npm ci
+npm run prepare:solvers -- C:\Tools\TarkovWorkbench\resources\cp-solver
 npm run sync
 npm test
 node scripts/verify-catalog.mjs
@@ -29,3 +30,9 @@ To package an edition without downloaded game data or images, run `npm ci` and `
 The source repository and a portable release have different contents. The offline ZIP and installer embed a snapshot; the online-setup ZIP omits it. Do not upload binary releases, signing keys/certificates or local portable folders as source files; attach reviewed ZIPs to a GitHub Release instead. If bundled-asset releases are published later, review their included third-party data and images separately. See [distribution](DISTRIBUTION.md).
 
 Our application source is licensed under the [MIT License](../LICENSE). Third-party notices remain intact; this code license does not grant rights to Escape from Tarkov artwork or game data.
+
+## Native solver runtime
+
+Windows releases include OR-Tools CP-SAT and native HiGHS with their dependency notices. For a source build, copy the CP-SAT runtime from an extracted 1.9.0.11 or newer portable release using `npm run prepare:solvers -- C:\Tools\TarkovWorkbench\resources\cp-solver`, adjusting the path. The command verifies every file against the pinned hashes in `desktop/cp-solver/source.json` before copying. The runtime must be prepared before running the native tests or packaging. `npm run prepare:solvers -- --check` verifies an existing local runtime. Large generated runtime files are excluded from the source repository and included in release packages. No compiler or Python environment is needed.
+
+Solver source URLs, version and archive checksums are recorded in the runtime manifests. Native resources are packaged outside ASAR. See [solver selection](SOLVER-PERFORMANCE.md) for routing, caching and cancellation.

@@ -4,13 +4,24 @@ import { readFile, stat } from 'node:fs/promises';
 import { resolve, sep, extname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { spawn } from 'node:child_process';
+import {Readable} from 'node:stream';
+import {createNativeService,nativeResponse,trustedNativeOrigin} from '../desktop/native-service.mjs';
 import { imageResponse } from '../desktop/image-download.mjs';
 const root=resolve(fileURLToPath(new URL('../dist/',import.meta.url)));
+const nativeSolver=createNativeService({executable:resolve(root,'../desktop/native-solver/highs.exe'),cpExecutable:resolve(root,'../desktop/cp-solver/sat_runner.exe')});
+process.on('exit',()=>nativeSolver.close());
 const mime={'.html':'text/html; charset=utf-8','.mjs':'text/javascript; charset=utf-8','.js':'text/javascript; charset=utf-8','.css':'text/css; charset=utf-8','.json':'application/json; charset=utf-8','.wasm':'application/wasm','.png':'image/png','.webp':'image/webp','.svg':'image/svg+xml'};
 http.createServer(async(req,res)=>{
   try {
-    if(req.method!=='GET'){res.writeHead(405).end('Method not allowed');return;}
     const url=new URL(req.url,'http://localhost'),path=decodeURIComponent(url.pathname);
+    if(['/api/solver','/api/solve'].includes(path)){
+      if(!trustedNativeOrigin(req.headers.host,req.headers.origin,req.socket.localPort)){res.writeHead(403).end('Forbidden');return;}
+      const controller=new AbortController();res.on('close',()=>{if(!res.writableEnded)controller.abort();});req.on('aborted',()=>controller.abort());
+      const request=new Request(`http://${req.headers.host}${req.url}`,{method:req.method,headers:req.headers,signal:controller.signal,...(req.method==='POST'?{body:Readable.toWeb(req),duplex:'half'}:{})});
+      const response=await nativeResponse(request,nativeSolver);
+      res.writeHead(response.status,Object.fromEntries(response.headers));res.end(new Uint8Array(await response.arrayBuffer()));return;
+    }
+    if(req.method!=='GET'){res.writeHead(405).end('Method not allowed');return;}
     if(path==='/api/image'){
       const controller=new AbortController();res.on('close',()=>{if(!res.writableEnded)controller.abort();});
       const response=await imageResponse(url.searchParams.get('source'),controller.signal);

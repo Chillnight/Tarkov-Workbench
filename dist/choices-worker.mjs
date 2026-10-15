@@ -1,19 +1,18 @@
 // Author: CA
 import loadHighs from './vendor/highs.mjs';
-import {choiceCandidates,compatibleChoice} from './attachment-choices.mjs';
+import {createChoiceSolver} from './choice-solver.mjs';
+let solver,catalog,options,kind,loading;
 self.onmessage=async event=>{
   try{
-    const {catalog,options,kind}=event.data;
-    const solver=await loadHighs({locateFile:name=>new URL(`vendor/${name}`,import.meta.url).href});
-    const candidates=choiceCandidates(catalog,options,kind),ids=[];let checked=0,unchecked=0;
-    for(const item of candidates){
-      const choice={...options,[kind==='scope'?'scopeId':'magazineId']:item.id};
-      if(kind==='magazine')choice.magazine=1;
-      const status=compatibleChoice(catalog,choice,solver);
-      if(status==='compatible')ids.push(item.id);
-      if(status==='unchecked')unchecked++;
-      self.postMessage({type:'choices',ids,checked:++checked,total:candidates.length,unchecked,done:checked===candidates.length});
+    const message=event.data;
+    if(message.type==='init'){
+      ({catalog,options,kind}=message);
+      solver=await createChoiceSolver(catalog,options,()=>loading??=loadHighs({locateFile:name=>new URL(`vendor/${name}`,import.meta.url).href}),{edgeCount:message.edgeCount});self.postMessage({type:'ready'});return;
     }
-    if(!candidates.length)self.postMessage({type:'choices',ids,checked:0,total:0,unchecked:0,done:true});
+    if(message.type!=='check'||!solver||!catalog)throw new Error('Compatibility worker is not ready.');
+    const choice={...options,[kind==='scope'?'scopeId':'magazineId']:message.id};
+    if(kind==='magazine')choice.magazine=1;
+    const status=await solver.check(choice);
+    self.postMessage({type:'choice',id:message.id,task:message.task,status});
   }catch(error){self.postMessage({type:'error',message:error.message});}
 };

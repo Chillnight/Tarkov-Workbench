@@ -1,5 +1,6 @@
 // Author: CA
 import { isOptic, isIronSight, isIronSightSlot, ironSightKinds, availableIronSightKinds } from './optics.mjs';
+import {proveZeroObjective} from './solver-model.mjs';
 import {factoryPartCount} from './factory-parts.mjs';
 import { isAvailable } from './availability.mjs';
 import { cheapestOffer,buildCost } from './traders.mjs';
@@ -7,7 +8,7 @@ import {mountProfile,isSpecialMount} from './mount-profiles.mjs';
 import {MAGAZINE_MINIMUMS} from './magazine-preferences.mjs';
 import {dominatedLeafNodes} from './equivalent-parts.mjs';
 import {preferThermalHandguards} from './thermal-handguards.mjs';
-export const ENGINE_VERSION = '1.9.0.10';
+export const ENGINE_VERSION = '1.9.0.11';
 const clamp = value => Math.min(100, Math.max(0, value));
 const rounded = value => Math.round(value * 1e8) / 1e8;
 function expression(terms) {
@@ -233,15 +234,26 @@ export function validateBuild(catalog, options, rows) {
 }
 class UnprovenBuild extends Error {}
 export function optimize(catalog, options, solver, progress=()=>{}) {
-  try { return optimizeBuild(catalog,options,solver,progress); }
-  catch(error) { if(error instanceof UnprovenBuild) return {status:'unproven',message:error.message}; throw error; }
+  try {
+    const steps=optimizeBuild(catalog,options,progress);let step=steps.next();
+    while(!step.done)step=steps.next(solver.solve(step.value.text,step.value.settings));
+    return step.value;
+  }catch(error) { if(error instanceof UnprovenBuild) return {status:'unproven',message:error.message}; throw error; }
 }
-function optimizeBuild(catalog, options, solver, progress) {
+export async function optimizeAsync(catalog, options, solver, progress=()=>{}) {
+  try {
+    const steps=optimizeBuild(catalog,options,progress);let step=steps.next();
+    while(!step.done)step=steps.next(await solver.solve(step.value.text,step.value.settings,{searchClass:step.value.searchClass,practicalPhase:step.value.practicalPhase}));
+    return step.value;
+  }catch(error) { if(error instanceof UnprovenBuild) return {status:'unproven',message:error.message}; throw error; }
+}
+function* optimizeBuild(catalog, options, progress) {
   if(!['ergo','recoil','balanced'].includes(options.mode)) throw new Error('Invalid build objective.');
   if(!Number.isFinite(options.balance)||options.balance<0||options.balance>100) throw new Error('Invalid ergonomics threshold.');
   if(options.maxBudget!==null&&options.maxBudget!==undefined&&(!Number.isSafeInteger(options.maxBudget)||options.maxBudget<1||options.maxBudget>100000000))throw new Error('Invalid attachment budget.');
   const started=Date.now(), problem=createProblem(catalog,options);
   const {nodes,lp,ergoTerms,recoilTerms,mountTerms,highMountTerms,specialMountTerms,nonLowMountTerms,weightTerms,countTerms,priceTerms,unpricedTerms,magazineFitTerms}=problem;
+  let practicalPhase=false;
   const extra=[]; let allOptimal=true, latest, maxErgo=null, floor=null;
   const sum=(result,terms)=>rounded(terms.reduce((s,[v,k])=>s+v*(result.Columns?.[k]?.Primal??0),0));
   const settings={output_flag:false,time_limit:30,mip_rel_gap:0,mip_abs_gap:0};
@@ -249,13 +261,14 @@ function optimizeBuild(catalog, options, solver, progress) {
   // without an incumbent reports zero columns and must never become a build.
   const usable=result=>(result?.Status==='Optimal'||/limit/i.test(result?.Status??''))&&Boolean(result.Columns)&&Number.isFinite(result.ObjectiveValue)&&
     Object.values(result.Columns).every(c=>Number.isFinite(c.Primal))&&Math.round(result.Columns[problem.root.x]?.Primal??0)===1;
-  function solve(objective,label) {
+  function* solve(objective,label,searchClass=objective) {
     progress(label);
     const text=lp(objective,extra);
-    let result=solver.solve(text,settings);
+    let result=proveZeroObjective(text,latest);
+    if(!result)result=yield {text,settings,searchClass,practicalPhase};
     // Every later stage only adds bounds that the previous solution satisfies, so
     // an infeasible verdict there is numerical. Confirm it once without presolve.
-    if(latest&&result.Status==='Infeasible')result=solver.solve(text,{...settings,presolve:'off'});
+    if(latest&&result.Status==='Infeasible')result=yield {text,settings:{...settings,presolve:'off'},searchClass,practicalPhase};
     if(usable(result)){allOptimal&&=result.Status==='Optimal';latest=result;return result;}
     if(!latest){
       if(result.Status==='Infeasible')return null;
@@ -265,12 +278,12 @@ function optimizeBuild(catalog, options, solver, progress) {
     allOptimal=false;return latest;
   }
   if(options.magazine>1&&!options.magazineId&&magazineFitTerms.length){
-    const preferred=solve('magazineFit','Finding the closest compatible magazine capacity …');
+    const preferred=(yield* solve('magazineFit','Finding the closest compatible magazine capacity …'));
     if(!preferred)return {status:'infeasible',missing:problem.missing};
     extra.push(`${expression(magazineFitTerms)} >= ${Math.round(sum(preferred,magazineFitTerms))}`);
   }
   if(options.mode==='ergo'||options.mode==='balanced') {
-    const first=solve('ergo','Calculating maximum ergonomics …');
+    const first=(yield* solve('ergo','Calculating maximum ergonomics …'));
     if(!first) return {status:'infeasible',missing:problem.missing};
     maxErgo=clamp(sum(first,ergoTerms));
     if(options.mode==='balanced'&&!allOptimal) return {status:'unproven',message:'The maximum ergonomics value was not proved within the time limit. A reliable Balanced threshold could not be established.'};
@@ -278,62 +291,63 @@ function optimizeBuild(catalog, options, solver, progress) {
     // if the selected weapon, scope and availability rules cannot reach it.
     floor=options.mode==='ergo'?maxErgo:Math.min(maxErgo,options.balance);
     if(floor>0) extra.push(`${expression(ergoTerms)} >= ${floor-1e-7}`);
-    const second=solve('recoil','Minimizing recoil within the ergonomics requirement …');
+    const second=(yield* solve('recoil','Minimizing recoil within the ergonomics requirement …'));
     if(!second) throw new Error('No solution satisfies the calculated ergonomics threshold.');
     extra.push(`${expression(recoilTerms)} <= ${sum(second,recoilTerms)+1e-8}`);
     if(options.mode==='balanced') {
-      const third=solve('ergo','Improving ergonomics at the same recoil …');
+      const third=(yield* solve('ergo','Improving ergonomics at the same recoil …','ergo-tie'));
       if(!third) throw new Error('Could not select between equivalent builds.');
       const tieErgo=clamp(sum(third,ergoTerms));
       if(tieErgo>0) extra.push(`${expression(ergoTerms)} >= ${tieErgo-1e-7}`);
     }
   } else {
-    const first=solve('recoil','Calculating minimum recoil …');
+    const first=(yield* solve('recoil','Calculating minimum recoil …'));
     if(!first) return {status:'infeasible',missing:problem.missing};
     extra.push(`${expression(recoilTerms)} <= ${sum(first,recoilTerms)+1e-8}`);
-    const second=solve('ergo','Improving ergonomics at minimum recoil …');
+    const second=(yield* solve('ergo','Improving ergonomics at minimum recoil …'));
     if(!second) throw new Error('Ergonomics optimization failed.');
     const tieErgo=clamp(sum(second,ergoTerms));
     if(tieErgo>0) extra.push(`${expression(ergoTerms)} >= ${tieErgo-1e-7}`);
   }
-  function priceTieBreak(){
+  function* priceTieBreak(){
     const before=latest;
     extra.push(`${expression(countTerms)} = ${Math.round(sum(before,countTerms))}`);
     if(unpricedTerms.length){
-      const known=solve('unpriced','Preferring available vendor offers between equivalent builds …');
+      const known=(yield* solve('unpriced','Preferring available vendor offers between equivalent builds …'));
       if(!known){latest=before;return;}
       extra.push(`${expression(unpricedTerms)} = ${Math.round(sum(known,unpricedTerms))}`);
     }
-    latest=solve('price','Choosing the cheapest equivalent vendor build …')??before;
+    latest=(yield* solve('price','Choosing the cheapest equivalent vendor build …'))??before;
   }
   // Between builds with equal objective stats, "Prefer lighter parts" (default) ranks
   // weight before part count and price. Turned off, known offers and the lowest price
   // come first, so free factory parts are kept; part count and weight then break ties.
   const lighterFirst=options.preferLighterParts!==false;
-  function equivalentTieBreaks(weightLabel,countLabel){
+  function* equivalentTieBreaks(weightLabel,countLabel){
     if(lighterFirst){
-      const lightest=solve('weight',weightLabel);
+      const lightest=(yield* solve('weight',weightLabel));
       extra.push(`${expression(weightTerms)} <= ${sum(lightest,weightTerms)+1e-7}`);
-      solve('count',countLabel);
-      priceTieBreak();
+      (yield* solve('count',countLabel));
+      yield* priceTieBreak();
     }else{
       if(unpricedTerms.length){
-        const known=solve('unpriced','Preferring available vendor offers between equivalent builds …');
+        const known=(yield* solve('unpriced','Preferring available vendor offers between equivalent builds …'));
         extra.push(`${expression(unpricedTerms)} = ${Math.round(sum(known,unpricedTerms))}`);
       }
-      const cheapest=solve('price','Choosing the cheapest equivalent vendor build …');
+      const cheapest=(yield* solve('price','Choosing the cheapest equivalent vendor build …'));
       extra.push(`${expression(priceTerms)} <= ${sum(cheapest,priceTerms)+1e-6}`);
-      const compact=solve('count',countLabel);
+      const compact=(yield* solve('count',countLabel));
       extra.push(`${expression(countTerms)} = ${Math.round(sum(compact,countTerms))}`);
-      solve('weight',weightLabel);
+      (yield* solve('weight',weightLabel));
     }
   }
-  equivalentTieBreaks('Choosing the lightest build at equal performance …','Removing unnecessary parts …');
+  yield* equivalentTieBreaks('Choosing the lightest build at equal performance …','Removing unnecessary parts …');
   const baseline=latest,baselineErgo=clamp(sum(baseline,ergoTerms)),baselineRecoil=sum(baseline,recoilTerms);
   const baselineMounts=Math.round(sum(baseline,mountTerms)),baselineHigh=Math.round(sum(baseline,highMountTerms)),baselineNonLow=Math.round(sum(baseline,nonLowMountTerms));
   const baselineSpecial=Math.round(sum(baseline,specialMountTerms));
   let practical={enabled:options.preferPracticalMounts!==false,applied:false,ergoLoss:0,mountsRemoved:0,baselineErgo,baselineMounts,highMountsRemoved:0,specialMountsRemoved:0,lowerProfile:false};
   if(practical.enabled&&baselineMounts>0){
+    practicalPhase=true;
     // Only simplify the mounting system. Keep the main weapon parts and exact
     // scope; allow iron sights and mounts to move/change with the new route.
     extra.length=0;
@@ -343,21 +357,21 @@ function optimizeBuild(catalog, options, solver, progress) {
     for(const node of nodes)if(node.item.category!=='Mount'&&!isIronSight(node.item)){
       extra.push(`${node.x} = ${Math.round(baseline.Columns[node.x]?.Primal??0)}`);
     }
-    const lower=solve('profile','Avoiding high-profile mounts and risers within 4 Ergo …');
+    const lower=(yield* solve('profile','Avoiding high-profile mounts and risers within 4 Ergo …'));
     if(lower)extra.push(`${expression(highMountTerms)} = ${Math.round(sum(lower,highMountTerms))}`);
-    const standard=lower&&(specialMountTerms.length?solve('special','Preferring ordinary mounts over specialized housings …'):lower);
+    const standard=lower&&(specialMountTerms.length?(yield* solve('special','Preferring ordinary mounts over specialized housings …')):lower);
     if(standard&&specialMountTerms.length)extra.push(`${expression(specialMountTerms)} = ${Math.round(sum(standard,specialMountTerms))}`);
-    const lowPreferred=standard&&solve('nonLow','Preferring reviewed low-profile mounting routes …');
+    const lowPreferred=standard&&(yield* solve('nonLow','Preferring reviewed low-profile mounting routes …'));
     if(lowPreferred)extra.push(`${expression(nonLowMountTerms)} = ${Math.round(sum(lowPreferred,nonLowMountTerms))}`);
-    const simpler=lowPreferred&&solve('mounts','Finding practical mounts within 4 Ergo of the reference build …');
+    const simpler=lowPreferred&&(yield* solve('mounts','Finding practical mounts within 4 Ergo of the reference build …'));
     if(simpler&&(Math.round(sum(simpler,highMountTerms))<baselineHigh||Math.round(sum(simpler,specialMountTerms))<baselineSpecial||Math.round(sum(simpler,nonLowMountTerms))<baselineNonLow||Math.round(sum(simpler,mountTerms))<baselineMounts)){
       const mounts=Math.round(sum(simpler,mountTerms));
       extra.push(`${expression(mountTerms)} = ${mounts}`);
-      const ergonomic=solve('ergo','Preserving ergonomics with fewer mounts …');
+      const ergonomic=(yield* solve('ergo','Preserving ergonomics with fewer mounts …'));
       if(ergonomic){
         const keepErgo=clamp(sum(ergonomic,ergoTerms));
         if(keepErgo>0)extra.push(`${expression(ergoTerms)} >= ${keepErgo-1e-7}`);
-        equivalentTieBreaks('Choosing the lighter practical mounting system …','Removing redundant mounting parts …');
+        yield* equivalentTieBreaks('Choosing the lighter practical mounting system …','Removing redundant mounting parts …');
         floor=practicalFloor;
         practical={...practical,applied:true,specialMountsRemoved:baselineSpecial-Math.round(sum(latest,specialMountTerms)),highMountsRemoved:baselineHigh-Math.round(sum(latest,highMountTerms)),lowerProfile:Math.round(sum(latest,highMountTerms))<baselineHigh||Math.round(sum(latest,nonLowMountTerms))<baselineNonLow,ergoLoss:rounded(baselineErgo-clamp(sum(latest,ergoTerms))),mountsRemoved:baselineMounts-Math.round(sum(latest,mountTerms))};
       }else latest=baseline;

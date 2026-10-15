@@ -1,5 +1,5 @@
 // Author: CA
-import { optimize, validateBuild } from './optimizer.mjs';
+import { optimize, optimizeAsync, validateBuild } from './optimizer.mjs';
 import { moddableWeapons } from './weapon-picker.mjs';
 import { isAvailable } from './availability.mjs';
 import { buildCost } from './traders.mjs';
@@ -243,7 +243,7 @@ function validateOptions(options = {}) {
   }
 }
 
-export function compareCategory(catalog, options = {}, solver, progress = () => {}) {
+function* compareCategorySteps(catalog, options = {}, progress = () => {}) {
   validateOptions(options);
   const category = typeof options.category === 'string' ? options.category : null;
   const caliber = options.caliber === null || options.caliber === undefined ? null : options.caliber;
@@ -261,7 +261,7 @@ export function compareCategory(catalog, options = {}, solver, progress = () => 
     const selection = comparisonSelection(options, item.id);
     emit(`Calculating ${item.shortName} …`);
     try {
-      const result = optimize(catalog, selection, solver, message => emit(`${item.shortName}: ${message}`));
+      const result = yield { selection, progress: message => emit(`${item.shortName}: ${message}`) };
       const validation = validateCandidate(catalog, selection, result);
       if (validation.ok) entries.push({ weaponId: item.id, selection, result });
       else excluded.push({ weaponId: item.id, status: validation.status, message: validation.message });
@@ -289,4 +289,15 @@ export function compareCategory(catalog, options = {}, solver, progress = () => 
     completeRanking,
     seconds: (Date.now() - started) / 1000
   };
+}
+
+export function compareCategory(catalog,options={},solver,progress=()=>{}){
+ const steps=compareCategorySteps(catalog,options,progress);let step=steps.next();
+ while(!step.done){try{step=steps.next(optimize(catalog,step.value.selection,solver,step.value.progress));}catch(error){step=steps.throw(error);}}
+ return step.value;
+}
+export async function compareCategoryAsync(catalog,options={},solverFactory,progress=()=>{}){
+ const steps=compareCategorySteps(catalog,options,progress);let step=steps.next();
+ while(!step.done){try{const {selection,progress:notify}=step.value,solver=typeof solverFactory==='function'?await solverFactory(selection,notify):solverFactory;step=steps.next(await optimizeAsync(catalog,selection,solver,notify));}catch(error){step=steps.throw(error);}}
+ return step.value;
 }

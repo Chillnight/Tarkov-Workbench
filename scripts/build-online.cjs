@@ -7,6 +7,8 @@ const pkg = require('../package.json');
 const root = path.resolve(__dirname, '..');
 
 async function main() {
+  const {verifyNativeRuntime}=await import('./prepare-cp-solver.mjs');
+  await verifyNativeRuntime();
   const dataDirectory = path.join(root, 'dist', 'data');
   await mkdir(dataDirectory, { recursive: true });
   await copyFile(path.join(root, 'scripts', 'overrides.json'), path.join(dataDirectory, 'overrides.json'));
@@ -21,11 +23,14 @@ async function main() {
       '!dist/data/precomputed.json',
       '!dist/images/**/*',
       'desktop/**/*',
+      '!desktop/native-solver/**/*',
+      '!desktop/cp-solver/**/*',
       'package.json'
     ],
     win: { ...pkg.build.win, target: 'dir', signExecutable: false }
   };
   await build({ targets: Platform.WINDOWS.createTarget(['dir'], Arch.x64), config, publish: 'never' });
+  await verifyNativeRuntime(path.join(root, 'release', 'online', 'win-unpacked', 'resources', 'cp-solver'));
   const archive = path.join(root, 'release', 'online', 'win-unpacked', 'resources', 'app.asar');
   const entries = listPackage(archive).map(entry => entry.replaceAll('\\', '/'));
   if (!entries.includes('/dist/app.mjs') || !entries.includes('/dist/data/overrides.json')) throw new Error('Online runtime is missing required app files.');
@@ -35,4 +40,4 @@ async function main() {
   console.log('Online portable runtime: release/online/win-unpacked');
 }
 
-main().catch(error => { console.error(error); process.exitCode = 1; });
+main().catch(error => { console.error(error); process.exit(1); });

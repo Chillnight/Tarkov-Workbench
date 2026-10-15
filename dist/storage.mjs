@@ -18,7 +18,8 @@ export async function put(key,value) {
 export function isStaleCacheKey(key,dataVersion,engineVersion) {
   return typeof key==='string'&&(
     (key.startsWith('catalog:')&&key!==`catalog:${dataVersion}`)||
-    (key.startsWith('build:')&&!key.startsWith(`build:${engineVersion}:${dataVersion}:`))
+    (key.startsWith('build:')&&!key.startsWith(`build:${engineVersion}:${dataVersion}:`))||
+    (key.startsWith('choices:')&&key!=='choices:index'&&!key.startsWith(`choices:${engineVersion}:${dataVersion}:`))
   );
 }
 
@@ -42,4 +43,8 @@ export async function saveUpdate(snapshot,previousSnapshot){
     store.put(snapshot,'updates:active');
     tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error);tx.onabort=()=>reject(tx.error);
   });
+}
+
+export async function remove(key) {
+  try {const db=await open();await new Promise((resolve,reject)=>{const tx=db.transaction('cache','readwrite');tx.objectStore('cache').delete(key);tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error);});return true;}catch{return false;}
 }
