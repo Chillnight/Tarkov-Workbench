@@ -1,51 +1,40 @@
 // Author: CA
 const { createHash } = require('node:crypto');
-const { createReadStream, existsSync, readdirSync, writeFileSync } = require('node:fs');
+const { readFileSync, writeFileSync, mkdirSync } = require('node:fs');
 const path = require('node:path');
-const { finished } = require('node:stream/promises');
 const { build, Platform, Arch } = require('electron-builder');
-
+const { onlineConfig, prepareOnline, verifyOnline } = require('./online-package.cjs');
 const root = path.resolve(__dirname, '..');
 const pkg = require(path.join(root, 'package.json'));
-const catalog = path.join(root, 'dist', 'data', 'catalog.json');
-const images = path.join(root, 'dist', 'images');
-const installer = path.join(root, 'release', 'Tarkov-Workbench-Setup.exe');
-
-async function sha256(file) {
-  const hash = createHash('sha256');
-  const stream = createReadStream(file);
-  stream.on('data', chunk => hash.update(chunk));
-  await finished(stream);
-  return hash.digest('hex').toUpperCase();
-}
 
 async function main() {
-  if (!existsSync(catalog) || !existsSync(images) || readdirSync(images).length === 0) {
-    throw new Error('The local game-data snapshot is missing. Run npm run sync before building an offline installer.');
-  }
+  await prepareOnline();
+  const output = path.join(root, 'release', 'installer');
+  mkdirSync(output, { recursive: true });
+  const marker = path.join(output, 'installation.json');
+  writeFileSync(marker, JSON.stringify({ app: 'Tarkov Workbench', distribution: 'installer', version: pkg.build.buildVersion }) + '\n');
   const config = {
-    ...pkg.build,
-    win: {
-      ...pkg.build.win,
-      target: 'nsis',
-      signExecutable: false
-    },
+    ...onlineConfig('release/installer'),
+    win: { ...pkg.build.win, target: 'nsis', signExecutable: false },
+    extraResources: [...pkg.build.extraResources, { from: marker, to: 'installation.json' }, { from: 'LICENSE', to: 'LICENSE.txt' }],
     nsis: {
-      oneClick: true,
-      perMachine: false,
-      createDesktopShortcut: true,
-      createStartMenuShortcut: true,
-      runAfterFinish: true,
+      oneClick: false, perMachine: false, selectPerMachineByDefault: true,
+      allowElevation: true, allowToChangeInstallationDirectory: true,
+      createDesktopShortcut: true, createStartMenuShortcut: true,
+      shortcutName: 'Tarkov Workbench', runAfterFinish: true,
+      deleteAppDataOnUninstall: false, packElevateHelper: false,
+      installerLanguages: ['en_US'], language: '1033', multiLanguageInstaller: false,
+      displayLanguageSelector: false, include: 'desktop/installer.nsh',
+      uninstallDisplayName: 'Tarkov Workbench',
       artifactName: 'Tarkov-Workbench-Setup.${ext}'
     }
   };
   await build({ targets: Platform.WINDOWS.createTarget(['nsis'], Arch.x64), config, publish: 'never' });
-  if (!existsSync(installer)) throw new Error('Installer was not created.');
-  const checksum = await sha256(installer);
-  writeFileSync(path.join(root, 'release', 'Tarkov-Workbench-Setup.sha256'), `${checksum}  Tarkov-Workbench-Setup.exe\n`, 'ascii');
+  await verifyOnline(path.join(output, 'win-unpacked'));
+  const installer = path.join(output, 'Tarkov-Workbench-Setup.exe');
+  const checksum = createHash('sha256').update(readFileSync(installer)).digest('hex');
+  writeFileSync(path.join(output, 'Tarkov-Workbench-Setup.sha256'), `${checksum}  Tarkov-Workbench-Setup.exe\n`, 'ascii');
   console.log(`Installer: ${installer}`);
   console.log(`SHA-256: ${checksum}`);
-  console.log('Installer is unsigned; public trust depends on Windows reputation or a future trusted signing channel.');
 }
-
-main().catch(error => { console.error(error); process.exitCode = 1; });
+main().catch(error => { console.error(error); process.exit(1); });

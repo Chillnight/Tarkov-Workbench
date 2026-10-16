@@ -58,7 +58,8 @@ else {
       backgroundColor:'#101415',icon:join(__dirname,'icon.ico'),
       webPreferences:{preload:join(__dirname,'preload.cjs'),nodeIntegration:false,nodeIntegrationInWorker:false,contextIsolation:true,sandbox:true,webSecurity:true,webviewTag:false,spellcheck:false}
     });
-    const {createAppUpdater}=await import(pathToFileURL(join(__dirname,'app-updater.mjs')).href);
+    const {createAppUpdater,cleanupInstallerDownloads}=await import(pathToFileURL(join(__dirname,'app-updater.mjs')).href);
+    await cleanupInstallerDownloads(app.getPath('userData')).catch(()=>{});
     const updater=createAppUpdater({app,helperPath:join(__dirname,'apply-update.ps1'),sendProgress:value=>{if(!mainWindow.isDestroyed())mainWindow.webContents.send('app-update:progress',value);}});
     for(const action of ['check','install','cancel'])ipcMain.handle(`app-update:${action}`,async event=>{
       if(event.sender!==mainWindow.webContents||event.senderFrame!==mainWindow.webContents.mainFrame||!event.senderFrame.url.startsWith(baseURL))throw new Error('Untrusted update request.');

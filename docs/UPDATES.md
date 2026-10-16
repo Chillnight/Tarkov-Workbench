@@ -2,6 +2,10 @@
 
 Author: CA
 
+## Windows installer (1.9.0.12)
+
+The English installer offers an installation folder and optional desktop shortcut. Installed apps use the verified setup executable for program updates; portable apps keep their ZIP update path. Both editions use the same Roaming profile. Uninstalling preserves local settings and downloaded data. See [distribution](DISTRIBUTION.md).
+
 ## Adaptive solver selection (1.9.0.11)
 
 Complex weapon builds, category comparisons and attachment checks can use CP-SAT. Simpler cases keep HiGHS. Attachment searches prioritize active filters and reuse completed compatibility checks, with automatic solver fallback. Existing compatibility, availability and budget rules remain active.
@@ -30,7 +34,7 @@ Versions 1.9.0.3 and 1.9.0.4 have a Windows helper-launch defect and need one ma
 
 Select **Update database** below the retrieval timestamp, then **Download update**. The app first shows the source hosts and asks for permission for this download. **Stay offline** closes the prompt without starting a network request. There are no startup checks, scheduled checks or automatic background downloads.
 
-The online-setup portable edition has no bundled game data or item images. On its first launch, the same dialog opens automatically and offers **Download data** or **Stay offline**. Only the button starts a network request. If setup is deferred or fails, the app remains empty and **Update database** reopens the prompt. A successful setup saves all required images and the catalog together; later launches work offline.
+The online-setup portable edition and installer have no bundled game data or item images. On its first launch, the same dialog opens automatically and offers **Download data** or **Stay offline**. Only the button starts a network request. If setup is deferred or fails, the app remains empty and **Update database** reopens the prompt. A successful setup saves all required images and the catalog together; later launches work offline.
 
 The public community sources are:
 

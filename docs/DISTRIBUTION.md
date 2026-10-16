@@ -2,14 +2,22 @@
 
 Author: CA
 
-The GitHub repository is the source project. End users should use the `Tarkov-Workbench-Online-Portable.zip` GitHub Release asset instead of the green Code / Download ZIP button, which downloads source files and is not an installable application. Extract the complete portable ZIP and run the EXE in its root. An installer may be offered in a later release. The older offline portable build and the current local installer build contain a database snapshot and item images; neither is part of the public release.
+Offer both Windows release assets: `Tarkov-Workbench-Setup.exe` for installation and `Tarkov-Workbench-Online-Portable.zip` for portable use. Publish each with its matching `.sha256` asset. GitHub's Code / Download ZIP contains source files, not a ready-to-run app.
 
-For a release without a redistributed game-data snapshot or item images, run `npm run portable:online` and offer `Tarkov-Workbench-Online-Portable.zip`. Its root EXE opens an initial setup dialog naming the data and image hosts. The user chooses whether to download; the app validates the full data set and all required images before saving them for offline use. No download begins on startup without that choice. This edition needs an internet connection once and does not include the bundled images or catalog.
+## Installer
 
-After synchronizing and verifying the local game data, build the installer with `npm run installer:build`. The output is `release/Tarkov-Workbench-Setup.exe`, with a stable filename, and `release/Tarkov-Workbench-Setup.sha256`. The one-click installer installs for the current user without requiring administrator rights, creates Start Menu and desktop shortcuts, and launches the app after setup. Building does not install or publish it. The source checkout's image and catalog exclusions have no effect on what the installer embeds.
+Run `npm run installer:build` after preparing the pinned native solver runtime. The output is `release/installer/Tarkov-Workbench-Setup.exe` and `Tarkov-Workbench-Setup.sha256`. The English setup wizard offers installation for everyone or only the current Windows account, a selectable installation directory and an optional desktop shortcut. It adds a Start menu shortcut and an uninstaller in Windows Installed apps. The default system-wide installation requests administrator access and uses Program Files. Choose 'Only for me' for a writable user location without administrator access. Setup checks write access before copying app files and asks to close only the Workbench executable in the selected target folder. Other portable copies, setup executables and uninstallers are not terminated.
 
-Before making the release public, confirm permission to redistribute the Escape from Tarkov item images and snapshot. The tarkov.dev API is publicly available for community tools, but that alone is not an explicit license for repackaging game artwork. Moving the same images from Git history into an installer or Release asset does not change this question. If redistribution cannot be confirmed, use an installer that retrieves the data from the provider with clear first-run consent and local caching, subject to the provider's terms.
+Existing installed copies can be updated with the same installer. The setup remembers the existing location and desktop shortcut preference. Updates replace the installed program; they do not leave a separate old app copy. Uninstalling removes program files and shortcuts while retaining settings and downloaded data in the user's Roaming profile. Keep personal files outside the application folder.
 
-The installer and portable builds are unsigned. Self-signed test certificates are not used for distribution because they do not make the app or its DLLs trusted by Windows Smart App Control. A public release needs a separate distribution/signing decision; a new installer filename or GitHub hosting alone does not solve Windows reputation blocks.
+## Portable
 
-Keep the repository's source history. GitHub Releases hold binary downloads separately from source commits. If a clean initial Git history is wanted later, prepare and review a replacement branch before changing the remote; deleting the entire repository is unnecessary for this distribution layout.
+Run `npm run portable:online` to create `Online-Portable/`, `Tarkov-Workbench-Online-Portable.zip` and its checksum. Extract the complete ZIP into a dedicated writable folder and open its root `Tarkov-Workbench.exe`.
+
+## Local data and updates
+
+Both public editions exclude downloaded Escape from Tarkov item data and images. First launch asks before downloading from the named providers. Existing database, settings and saved builds under `AppData/Roaming/Tarkov Workbench` are shared by both editions and preserved when installing, updating or uninstalling. Nothing is downloaded by the setup wizard.
+
+**Check for updates** selects the matching distribution. Portable updates verify and replace the ZIP contents at the same location. Installed app updates verify the setup executable and open the English wizard with the existing target directory; the app closes after the installer starts. The user must complete setup. Cancelling setup leaves the installed version in place. The downloaded setup is cached under the user profile and removed on a later app launch when it is no longer locked. Database updates remain separate and manual.
+
+Both builds include the native solver runtimes and their third-party notices. Neither requires Node.js, Python or a compiler on the user's PC. Both are unsigned; an installer does not add Windows trust or avoid Smart App Control. Building does not install or publish the output.

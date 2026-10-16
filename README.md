@@ -4,13 +4,17 @@
 
 An open-source Escape from Tarkov weapon builder for Windows. Choose how you want a weapon to perform, and Tarkov Workbench assembles a compatible build from locally saved community data.
 
-## New in 1.9.0.11
+## New in 1.9.0.12
 
-Added CP-SAT acceleration for complex weapon builds, category comparisons, and scope and magazine checks. Simpler cases keep HiGHS. Attachment searches prioritize your filters and reuse completed checks, with automatic solver fallback.
+Added an English Windows installer with a selectable installation folder and optional desktop shortcut. Portable and installed apps keep separate update paths and share your existing local data and settings.
 
 ## Download
 
-**[Download the Windows portable ZIP](https://github.com/Chillnight/Tarkov-Workbench/releases/latest/download/Tarkov-Workbench-Online-Portable.zip)** · [Release notes and checksum](https://github.com/Chillnight/Tarkov-Workbench/releases/latest)
+**[Download the Windows installer](https://github.com/Chillnight/Tarkov-Workbench/releases/latest/download/Tarkov-Workbench-Setup.exe)** or **[download the portable ZIP](https://github.com/Chillnight/Tarkov-Workbench/releases/latest/download/Tarkov-Workbench-Online-Portable.zip)** · [Release notes and checksum](https://github.com/Chillnight/Tarkov-Workbench/releases/latest)
+
+For installation, run `Tarkov-Workbench-Setup.exe` and follow the English setup wizard. Choose whether to install for everyone or only yourself, your installation folder and an optional desktop shortcut. No separate runtime is required. A Start menu shortcut and an uninstaller in Windows Installed apps are included.
+
+For the portable version:
 
 1. Extract the **entire** ZIP to a folder.
 2. Run `Tarkov-Workbench.exe` from that folder. Keep its `resources`, `locales` and other runtime files beside the EXE.
@@ -61,11 +65,11 @@ Unavailable suppressor variants stay muted; click one for an explanation. Enter 
 
 ## Data and updates
 
-The portable ZIP contains the app, but no downloaded Escape from Tarkov item database or item-image collection. At first setup, the app asks before retrieving item data and English names from `json.tarkov.dev` and required images from `assets.tarkov.dev`. It saves them under the Windows user profile (`AppData/Roaming/Tarkov Workbench`) for later offline use. Choosing **Stay offline** leaves the builder empty until you start setup through **Update database**.
+The installer and portable ZIP contain the app, but no downloaded Escape from Tarkov item database or item-image collection. At first setup, the app asks before retrieving item data and English names from `json.tarkov.dev` and required images from `assets.tarkov.dev`. It saves them under the Windows user profile (`AppData/Roaming/Tarkov Workbench`) for later offline use. Choosing **Stay offline** leaves the builder empty until you start setup through **Update database**.
 
 **Update database** is manual. It validates a new snapshot before replacing the active one; a failed or cancelled update keeps your previous data. A changed database clears calculated results so you can recalculate with current parts. Feature and compatibility-rule changes still require a new app release. See [data updates](docs/UPDATES.md) for details.
 
-**Check for updates** is a separate, manual program-update button. It checks the latest stable GitHub Release; equal or older versions are never offered as updates. In the Windows portable app, confirm **Download and restart** to download the complete package, verify its SHA-256 checksum and replace the app at the same location. Your database and settings stay in your user profile. After a successful update, the old version and temporary files are removed automatically. Browser and source-development versions offer the portable ZIP instead. Nothing is checked or downloaded automatically on startup.
+**Check for updates** is a separate, manual program-update button. It checks the latest stable GitHub Release; equal or older versions are never offered as updates. In the Windows portable app, confirm **Download and restart** to download the complete package, verify its SHA-256 checksum and replace the app at the same location. Your database and settings stay in your user profile. After a successful update, the old version and temporary files are removed automatically. Installed apps offer **Download and run installer**, verify the setup download and open the English wizard at the existing install location. Windows registration and the uninstaller are retained. Browser and source-development versions offer the portable ZIP instead. Nothing is checked or downloaded automatically on startup.
 
 ## Build from source
 
@@ -78,7 +82,7 @@ npm test
 npm run portable:online
 ```
 
-Copy the pinned native runtime from an extracted 1.9.0.11 or newer portable release using the prepare command above; adjust the example path to your folder. Run the tests after synchronizing local development data as described in [source setup](docs/SOURCE-SETUP.md). The last command creates `Tarkov-Workbench-Online-Portable.zip` and `Online-Portable/` without bundling downloaded item data or images. For local browser development or an offline snapshot build, follow [source setup](docs/SOURCE-SETUP.md). Additional details: [traders and loadout](docs/TRADERS-AND-LOADOUT.md), [practical mounts](docs/PRACTICAL-MOUNTS.md), [availability rules](docs/AVAILABILITY.md), and [distribution](docs/DISTRIBUTION.md).
+Copy the pinned native runtime from an extracted 1.9.0.11 or newer portable release using the prepare command above; adjust the example path to your folder. Run the tests after synchronizing local development data as described in [source setup](docs/SOURCE-SETUP.md). The packaging commands create `Tarkov-Workbench-Online-Portable.zip`, `Online-Portable/` and `release/installer/Tarkov-Workbench-Setup.exe` without bundling downloaded item data or images. For local browser development or an offline snapshot build, follow [source setup](docs/SOURCE-SETUP.md). Additional details: [traders and loadout](docs/TRADERS-AND-LOADOUT.md), [practical mounts](docs/PRACTICAL-MOUNTS.md), [availability rules](docs/AVAILABILITY.md), and [distribution](docs/DISTRIBUTION.md).
 
 ## Sources and license
 

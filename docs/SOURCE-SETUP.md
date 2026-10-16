@@ -22,12 +22,11 @@ To prepare a portable Windows build after the data sync and verification:
 ```text
 npm run desktop:build
 npm run portable:package
-npm run installer:build
 ```
 
 To package an edition without downloaded game data or images, run `npm ci` and `npm run portable:online`. It creates `Online-Portable/` and `Tarkov-Workbench-Online-Portable.zip`; the first launch asks the user before downloading the current data and all required images. This build does not require `npm run sync`. Check the archive contents before publication.
 
-The source repository and a portable release have different contents. The offline ZIP and installer embed a snapshot; the online-setup ZIP omits it. Do not upload binary releases, signing keys/certificates or local portable folders as source files; attach reviewed ZIPs to a GitHub Release instead. If bundled-asset releases are published later, review their included third-party data and images separately. See [distribution](DISTRIBUTION.md).
+The source repository and a portable release have different contents. The local offline ZIP embeds a snapshot. The public online-setup ZIP and installer omit downloaded game data and images. Build the installer with `npm run installer:build`; no prior data sync is needed. Do not upload binary releases, signing keys/certificates or local portable folders as source files; attach reviewed ZIPs to a GitHub Release instead. If bundled-asset releases are published later, review their included third-party data and images separately. See [distribution](DISTRIBUTION.md).
 
 Our application source is licensed under the [MIT License](../LICENSE). Third-party notices remain intact; this code license does not grant rights to Escape from Tarkov artwork or game data.
 

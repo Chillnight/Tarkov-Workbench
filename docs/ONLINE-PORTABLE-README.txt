@@ -1,4 +1,4 @@
-TARKOV WORKBENCH 1.9.0.11 - ONLINE SETUP EDITION
+TARKOV WORKBENCH 1.9.0.12 - ONLINE SETUP EDITION
 Author: CA
 
 Keep this whole folder together. Start Tarkov-Workbench.exe in this folder.

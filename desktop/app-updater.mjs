@@ -1,10 +1,10 @@
 // Author: CA
 import { createHash } from 'node:crypto';
-import { mkdtemp, readFile, writeFile, open, rm, lstat } from 'node:fs/promises';
+import { mkdtemp, readFile, writeFile, open, rm, lstat, mkdir, readdir } from 'node:fs/promises';
 import { dirname, join, resolve, parse } from 'node:path';
 import { spawn } from 'node:child_process';
 import { setTimeout as delay } from 'node:timers/promises';
-import { checkForUpdate, checksumValue, ZIP_NAME } from '../dist/app-update.mjs';
+import { checkForUpdate, checksumValue, ZIP_NAME, SETUP_NAME } from '../dist/app-update.mjs';
 
 // Release downloads redirect to GitHub's asset CDN. Never follow an HTTP or unrelated redirect.
 export async function githubFetch(url, options = {}) {
@@ -38,11 +38,13 @@ export async function downloadVerified(candidate, directory, { fetcher = fetch, 
     if (hashSize > 4096) throw new Error('The checksum file is too large.');
     checksumBytes.push(Buffer.from(chunk));
   }
-  const expected = checksumValue(Buffer.concat(checksumBytes).toString('utf8'));
+  const assetName = candidate.assetName ?? ZIP_NAME;
+  if (![ZIP_NAME, SETUP_NAME].includes(assetName)) throw new Error('Unknown update download.');
+  const expected = checksumValue(Buffer.concat(checksumBytes).toString('utf8'), assetName);
   if (candidate.digest && candidate.digest.toLowerCase() !== `sha256:${expected}`) throw new Error('GitHub and the checksum file disagree. Your current app has not been changed.');
   const response = await fetcher(candidate.url, { signal });
-  if (!response.ok || !response.body) throw new Error('The portable update could not be downloaded.');
-  const file = await open(join(directory, ZIP_NAME), 'wx');
+  if (!response.ok || !response.body) throw new Error('The program update could not be downloaded.');
+  const file = await open(join(directory, assetName), 'wx');
   let size = 0;
   const hash = createHash('sha256');
   try {
@@ -97,14 +99,49 @@ export async function startUpdateHelper(script, config, stage, { signal, timeout
   }
 }
 
-export function createAppUpdater({ app, sendProgress, fetcher = githubFetch, helperPath }) {
+export async function installationKind(app, executable = process.execPath) {
+  if (!app.isPackaged || process.platform !== 'win32') return null;
+  for (const [kind, markerPath] of [
+    ['installer', join(dirname(executable), 'resources', 'installation.json')],
+    ['portable', join(dirname(executable), 'docs', 'portable.json')]
+  ]) {
+    try {
+      const marker = JSON.parse(await readFile(markerPath, 'utf8'));
+      if (marker.app === 'Tarkov Workbench' && marker.distribution === kind) return kind;
+    } catch {}
+  }
+  return null;
+}
+
+export async function cleanupInstallerDownloads(userData) {
+  const cache = join(userData, 'Installer Updates');
+  let entries;
+  try { if ((await lstat(cache)).isSymbolicLink()) return; entries = await readdir(cache, { withFileTypes: true }); }
+  catch (error) { if (error.code === 'ENOENT') return; throw error; }
+  for (const entry of entries) {
+    if (!entry.isDirectory() || !/^setup-[a-zA-Z0-9]+$/.test(entry.name)) continue;
+    const folder = join(cache, entry.name);
+    // Leave unknown contents alone. Only remove downloads created by this updater.
+    const children = await readdir(folder, { withFileTypes: true });
+    if (children.some(child => !child.isFile() || child.name !== SETUP_NAME)) continue;
+    await rm(folder, { recursive: true, force: true }).catch(() => {});
+  }
+}
+
+export function launchSetup(file, target) {
+  if (/["\r\n]/.test(target) || file !== join(dirname(file), SETUP_NAME)) throw new Error('Invalid installer launch path.');
+  return new Promise((resolveLaunch, reject) => {
+    // NSIS requires /D to be last and unquoted, including when the path has spaces.
+    const child = spawn(file, ['/D=' + target], { detached: true, stdio: 'ignore', windowsHide: false, windowsVerbatimArguments: true });
+    child.once('error', reject);
+    child.once('spawn', () => { child.unref(); resolveLaunch(); });
+  });
+}
+
+export function createAppUpdater({ app, sendProgress, fetcher = githubFetch, helperPath, executable = process.execPath, launchInstaller = launchSetup }) {
   let candidate = null, controller = null, handingOff = false;
   async function supported() {
-    if (!app.isPackaged || process.platform !== 'win32') return false;
-    try {
-      const marker = JSON.parse(await readFile(join(dirname(process.execPath), 'docs', 'portable.json'), 'utf8'));
-      return marker.app === 'Tarkov Workbench' && marker.distribution === 'portable';
-    } catch { return false; }
+    return Boolean(await installationKind(app, executable));
   }
   async function check() {
     if (controller || handingOff) throw new Error('An update operation is already in progress.');
@@ -112,15 +149,18 @@ export function createAppUpdater({ app, sendProgress, fetcher = githubFetch, hel
     controller = new AbortController();
     const timeout = setTimeout(() => controller?.abort(), 20000);
     try {
-      const result = await checkForUpdate({ fetcher, signal: controller.signal });
+      const distribution = await installationKind(app, executable) ?? 'portable';
+      const result = await checkForUpdate({ fetcher, signal: controller.signal, distribution });
       if (result.status === 'available') candidate = result;
-      return { ...result, canInstall: await supported() };
+      return { ...result, distribution, canInstall: await supported() };
     } finally { clearTimeout(timeout); controller = null; }
   }
   async function install() {
     if (!candidate || controller || handingOff) throw new Error('Check for a newer release before updating.');
-    if (!await supported()) throw new Error('Automatic installation is available in the Windows portable app.');
-    const target = validateInstallPath(dirname(process.execPath), process.execPath);
+    if (!await supported()) throw new Error('Automatic installation is available in the Windows portable or installed app.');
+    const distribution = await installationKind(app, executable);
+    if (distribution !== (candidate.distribution ?? 'portable')) throw new Error('The app distribution changed. Check for updates again.');
+    const target = validateInstallPath(dirname(executable), executable);
     for (const path of [target, join(target, 'resources')]) {
       if ((await lstat(path)).isSymbolicLink()) throw new Error('Automatic updates do not support linked app folders.');
     }
@@ -133,6 +173,20 @@ export function createAppUpdater({ app, sendProgress, fetcher = githubFetch, hel
     const timeout = setTimeout(() => controller?.abort(), 10 * 60 * 1000);
     let stage;
     try {
+      if (distribution === 'installer') {
+        await cleanupInstallerDownloads(app.getPath('userData'));
+        const cache = join(app.getPath('userData'), 'Installer Updates');
+        await mkdir(cache, { recursive: true });
+        if ((await lstat(cache)).isSymbolicLink()) throw new Error('Linked update folders are not supported.');
+        stage = await mkdtemp(join(cache, 'setup-'));
+        await downloadVerified(candidate, stage, { fetcher, signal, progress: sendProgress });
+        signal.throwIfAborted();
+        sendProgress({ text: 'Starting the verified installer. Follow the setup wizard to update…' });
+        await launchInstaller(join(stage, SETUP_NAME), target);
+        handingOff = true;
+        setTimeout(() => app.quit(), 300);
+        return { restarting: true, installer: true };
+      }
       stage = await mkdtemp(join(dirname(target), '.workbench-update-'));
       await downloadVerified(candidate, stage, { fetcher, signal, progress: sendProgress });
       sendProgress({ text: 'Verifying and preparing the update…' });

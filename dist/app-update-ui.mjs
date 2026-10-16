@@ -13,7 +13,7 @@ export function setupAppUpdates() {
   const title = dialog.querySelector('#app-update-title'), message = dialog.querySelector('#app-update-message');
   const note = dialog.querySelector('#app-update-note'), progress = dialog.querySelector('progress');
   const close = dialog.querySelector('#app-update-close'), install = dialog.querySelector('#app-update-install'), zip = dialog.querySelector('#app-update-zip');
-  let busy = false, controller = null, generation = 0, restarting = false;
+  let busy = false, controller = null, generation = 0, restarting = false, distribution = 'portable';
   function setBusy(value) {
     busy = value;
     trigger.disabled = value;
@@ -59,6 +59,7 @@ export function setupAppUpdates() {
     try {
       const result = bridge ? await bridge.check() : await checkForUpdate({ signal: controller.signal });
       if (ownGeneration !== generation) return;
+      distribution = result.distribution ?? 'portable';
       if (result.status === 'current') {
         title.textContent = 'You’re up to date';
         message.textContent = 'No newer version was found.';
@@ -67,7 +68,9 @@ export function setupAppUpdates() {
         title.textContent = `Version ${result.version} is available`;
         message.textContent = `Download the update from GitHub? Download size: ${(result.size / 1024 / 1024).toFixed(1)} MB.`;
         if (result.canInstall) {
+          install.textContent = distribution === 'installer' ? 'Download and run installer' : 'Download and restart';
           note.textContent = 'The download is verified before the app files are replaced. Tarkov Workbench will restart. Your database and settings in your user profile are kept. A rollback copy of the previous version is kept only during installation and removed after a successful restart.';
+          if (distribution === 'installer') note.textContent = 'The verified setup wizard will open and Tarkov Workbench will close. Follow the wizard to update your existing installation. Your database and settings in your user profile are kept.';
           install.hidden = false;
         } else {
           note.textContent = 'Download and extract the ZIP into a separate folder, then open Tarkov-Workbench.exe. Your existing database and settings are kept. Automatic replacement is available in the Windows portable app.';
@@ -84,12 +87,12 @@ export function setupAppUpdates() {
   install.addEventListener('click', async () => {
     const ownGeneration = ++generation;
     setBusy(true);
-    message.textContent = 'Downloading the verified portable update…';
+    message.textContent = 'Downloading the verified program update…';
     try {
       const result = await bridge.install();
       if (ownGeneration !== generation) return;
       restarting = Boolean(result.restarting);
-      if (restarting) { close.disabled = true; close.textContent = 'Restarting…'; }
+      if (restarting) { close.disabled = true; close.textContent = result.installer ? 'Opening setup…' : 'Restarting…'; }
     } catch (error) { if (ownGeneration === generation) showError(error); }
     finally { if (ownGeneration === generation && !restarting) setBusy(false); }
   });
