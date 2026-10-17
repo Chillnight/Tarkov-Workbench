@@ -4,9 +4,9 @@
 
 An open-source Escape from Tarkov weapon builder for Windows. Choose how you want a weapon to perform, and Tarkov Workbench assembles a compatible build from locally saved community data.
 
-## New in 1.9.0.12
+## New in 1.9.0.13
 
-Added an English Windows installer with a selectable installation folder and optional desktop shortcut. Portable and installed apps keep separate update paths and share your existing local data and settings.
+Bugfix: Fixed saved theme flashing green on startup.
 
 ## Download
 

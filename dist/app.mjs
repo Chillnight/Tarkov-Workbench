@@ -497,7 +497,7 @@ async function init(){
     const launchers=await storage.get('settings:allowGrenadeLaunchers');if(typeof launchers==='boolean')$('allow-launchers').checked=launchers;
     const budgetAmount=await storage.get('settings:maxBudget');if(Number.isSafeInteger(budgetAmount)&&budgetAmount>=1&&budgetAmount<=100000000)$('budget-amount').value=budgetAmount;
     $('budget-enabled').checked=(await storage.get('settings:budgetEnabled'))===true;$('budget-entry').hidden=!$('budget-enabled').checked;
-    const savedTheme=applyTheme(await storage.get('settings:theme'));
+    const savedTheme=applyTheme(await (globalThis.workbenchThemeReady ?? storage.get('settings:theme')));
     const loaded=await loadDatabase(state.bundled);
     if(loaded.snapshot)await activateDatabase(loaded.snapshot);
     else{$('data-status').textContent='No local database yet · setup required';notice('Download game data to start using the workbench. Nothing is downloaded without your approval.');}

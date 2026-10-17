@@ -8,7 +8,7 @@ import {mountProfile,isSpecialMount} from './mount-profiles.mjs';
 import {MAGAZINE_MINIMUMS} from './magazine-preferences.mjs';
 import {dominatedLeafNodes} from './equivalent-parts.mjs';
 import {preferThermalHandguards} from './thermal-handguards.mjs';
-export const ENGINE_VERSION = '1.9.0.12';
+export const ENGINE_VERSION = '1.9.0.13';
 const clamp = value => Math.min(100, Math.max(0, value));
 const rounded = value => Math.round(value * 1e8) / 1e8;
 function expression(terms) {

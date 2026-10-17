@@ -1,5 +1,5 @@
 // Author: CA
-export const APP_VERSION = '1.9.0.12';
+export const APP_VERSION = '1.9.0.13';
 export const REPOSITORY = 'Chillnight/Tarkov-Workbench';
 export const RELEASE_API = `https://api.github.com/repos/${REPOSITORY}/releases/latest`;
 export const ZIP_NAME = 'Tarkov-Workbench-Online-Portable.zip';
